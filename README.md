@@ -65,6 +65,24 @@ halalready/
 └── README.md
 ```
 
+## Quick start
+
+One command. It starts the MCP server, and the MCP server starts the backend itself if it
+is not already running.
+
+```bash
+./start.sh      # stop with ./stop.sh
+```
+
+- MCP URL: `http://127.0.0.1:8100/mcp`
+- Live log: <http://127.0.0.1:8000/events/view>
+- Logs: `mcp_server.log`, `backend/backend.log`
+
+**Run this in your own terminal, not from inside a chat.** Processes started by an
+assistant die when its turn ends — if you ever see `fetch failed` from the connector or
+the live page, it almost always means nothing is listening on 8100 any more. `./start.sh`
+again fixes it, and it is safe to run twice.
+
 ## 1. Install
 
 ```bash
@@ -97,7 +115,8 @@ auto-refreshes every 2 seconds. Handoff rows are highlighted and show `→ Suppl
 
 ## 3. Run the MCP server (port 8100)
 
-In a **second terminal**, with the backend still running:
+`./start.sh` above does this for you and starts the backend with it. To run it by hand,
+in a **second terminal**, with the backend still running:
 
 ```bash
 cd mcp
@@ -115,6 +134,10 @@ HalalReady MCP server
   MCP URL  -> http://127.0.0.1:8100/mcp
   live log -> http://127.0.0.1:8000/events/view
 ```
+
+If the backend is not up, this process starts it too and waits for it to answer
+`/health` — so starting only the MCP server is enough. It checks first, so it never
+double-binds port 8000; backend output goes to `backend/backend.log`.
 
 > Works with both MCP SDK majors. `mcp` 1.x ships `FastMCP`; `mcp` 2.x renamed it to
 > `MCPServer`. `mcp/server.py` detects whichever is installed, so you do not need to pin.
@@ -245,6 +268,7 @@ cannot fake that.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
+| `fetch failed` from the connector or the live page | Nothing is listening — the servers were stopped | `./start.sh`, then reload |
 | The tools never appear in any chat | Connector not Trusted | Connector page → click **Trust** on `halalready` |
 | Tools listed but calls fail with 404 | MCP URL missing `/mcp` | Use `http://127.0.0.1:8100/mcp`, not `:8100` |
 | `backend_health` returns `{"ok": false, ...}` | Backend not running | `curl http://127.0.0.1:8000/health` |

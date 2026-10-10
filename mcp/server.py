@@ -20,7 +20,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
+import sys
+import time
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -223,6 +228,67 @@ def backend_health() -> dict[str, Any]:
 # Entry point
 # --------------------------------------------------------------------------- #
 
+# --------------------------------------------------------------------------- #
+# Backend auto-start
+#
+# The MCP server is the thing WorkBuddy talks to, so it should be the only
+# process anyone has to remember to start. If the backend is not up when this
+# starts, bring it up too, detached, logging to backend/backend.log.
+#
+# This is idempotent: if a backend is already listening (started by hand, or
+# left over from a previous run) the health check sees it and nothing is
+# spawned, so restarting the MCP server never double-binds port 8000.
+# --------------------------------------------------------------------------- #
+
+def _backend_alive() -> bool:
+    try:
+        httpx.get(BACKEND + "/health", timeout=2)
+        return True
+    except Exception:  # noqa: BLE001 - anything means "not reachable"
+        return False
+
+
+def _spawn_backend() -> bool:
+    if _backend_alive():
+        return True
+
+    backend_dir = Path(__file__).resolve().parent.parent / "backend"
+    if not (backend_dir / "main.py").exists():
+        print(f"  !! cannot auto-start backend: {backend_dir / 'main.py'} not found")
+        return False
+
+    parsed = urlparse(BACKEND)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or 80
+    log_path = backend_dir / "backend.log"
+
+    options: dict[str, Any] = {}
+    if os.name == "nt":
+        options["creationflags"] = subprocess.CREATE_NO_WINDOW
+    else:
+        options["start_new_session"] = True
+
+    print(f"  backend not reachable -> starting it on {host}:{port} (log: {log_path})")
+    log = open(log_path, "ab")
+    subprocess.Popen(  # noqa: S603 - fixed argv, no shell
+        [sys.executable, "-m", "uvicorn", "main:app", "--host", host, "--port", str(port)],
+        cwd=str(backend_dir),
+        stdout=log,
+        stderr=log,
+        stdin=subprocess.DEVNULL,
+        **options,
+    )
+
+    for _ in range(60):  # ~15s
+        if _backend_alive():
+            print("  backend is up")
+            return True
+        time.sleep(0.25)
+
+    print(f"  !! backend did not come up in time — check {log_path}")
+    return False
+
+
 def main() -> None:
     global BACKEND
     parser = argparse.ArgumentParser(description="HalalReady MCP server")
@@ -238,6 +304,8 @@ def main() -> None:
     print(f"  backend  -> {BACKEND}")
     print(f"  MCP URL  -> http://{args.host}:{args.port}{MCP_PATH}")
     print(f"  live log -> {BACKEND}/events/view")
+
+    _spawn_backend()
 
     if _SDK_V2:
         mcp.run(transport="streamable-http", host=args.host, port=args.port,
