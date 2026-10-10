@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HalalGuard — Dashboard</title>
+  <meta name="description" content="HalalGuard AI Halal Certification Intelligence Platform — Overview Dashboard"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    /* ── Dashboard-specific ── */
+    .hero-banner {
+      background: linear-gradient(135deg, #0d2318 0%, #0a1a2e 50%, #12102a 100%);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: var(--radius-lg);
+      padding: 30px 36px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-banner::after {
+      content:'';
+      position:absolute; right:-60px; top:-60px;
+      width:260px; height:260px;
+      background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%);
+      border-radius:50%;
+    }
+    .hero-title {
+      font-family:'Outfit',sans-serif;
+      font-size:26px; font-weight:800;
+      background: linear-gradient(135deg,#e8f4f0,var(--emerald-lt));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      background-clip:text;
+      margin-bottom:6px;
+    }
+    .hero-sub { font-size:14px; color:var(--text-secondary); max-width:520px; line-height:1.6; }
+    .hero-ctas { display:flex; gap:12px; margin-top:20px; flex-wrap:wrap; }
+
+    .cert-countdown {
+      display:flex; align-items:center; gap:16px;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: var(--radius-sm);
+      padding:12px 18px;
+      margin-top:24px;
+    }
+    .cert-countdown-icon { font-size:22px; }
+    .cert-countdown p { font-size:13px; font-weight:600; color:var(--gold); }
+    .cert-countdown span { font-size:12px; color:var(--text-muted); }
+
+    .readiness-gauge-section {
+      display:flex; align-items:center; justify-content:center;
+      padding:24px 0 8px;
+    }
+
+    /* Donut gauge */
+    .gauge-svg { transform: rotate(-90deg); }
+    .gauge-center-text {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+    }
+    .gauge-pct {
+      font-family:'Outfit',sans-serif;
+      font-size:32px; font-weight:800;
+    }
+    .gauge-pct-lbl { font-size:11px; color:var(--text-muted); }
+
+    .checklist-row {
+      display:flex; align-items:center; gap:10px;
+      padding:9px 0;
+      border-bottom:1px solid var(--border);
+      font-size:13px;
+    }
+    .checklist-row:last-child { border-bottom:none; }
+    .check-icon { font-size:16px; flex-shrink:0; }
+
+    .notification-item {
+      display:flex; gap:12px; align-items:flex-start;
+      padding:12px 0;
+      border-bottom:1px solid var(--border);
+    }
+    .notification-item:last-child { border-bottom:none; }
+    .notif-icon {
+      width:34px; height:34px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:15px; flex-shrink:0;
+    }
+    .notif-body p { font-size:13px; font-weight:500; }
+    .notif-body span { font-size:11px; color:var(--text-muted); }
+
+    .quick-action-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+      margin-top:28px;
+    }
+    .quick-action {
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-md);
+      padding:18px 16px;
+      text-align:center;
+      cursor:pointer;
+      transition:var(--transition);
+    }
+    .quick-action:hover {
+      border-color:var(--border-glow);
+      transform:translateY(-2px);
+      box-shadow:var(--shadow-glow);
+    }
+    .qa-icon { font-size:28px; margin-bottom:8px; }
+    .qa-label { font-size:12px; font-weight:600; color:var(--text-secondary); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">☽</div>
+      <div class="brand-text">
+        <h2>HalalGuard</h2>
+        <span>Certification AI</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section-label">Overview</div>
+    <a href="dashboard.html" class="nav-item active" id="nav-dashboard">
+      <span class="nav-icon">⊞</span> Dashboard
+    </a>
+
+    <div class="sidebar-section-label">Features</div>
+    <a href="materials.html" class="nav-item" id="nav-materials">
+      <span class="nav-icon">🧪</span> Raw Material Check
+      <span class="nav-badge amber">3</span>
+    </a>
+    <a href="sitecheck.html" class="nav-item" id="nav-site">
+      <span class="nav-icon">🏭</span> Site Inspection
+      <span class="nav-badge">2</span>
+    </a>
+    <a href="readiness.html" class="nav-item" id="nav-readiness">
+      <span class="nav-icon">📋</span> Readiness Pack
+      <span class="nav-badge green">73%</span>
+    </a>
+
+    <div class="sidebar-section-label">Management</div>
+    <a href="audit.html" class="nav-item" id="nav-audit">
+      <span class="nav-icon">📜</span> Audit Log
+    </a>
+    <a href="notifications.html" class="nav-item" id="nav-notif">
+      <span class="nav-icon">🔔</span> Notifications
+      <span class="nav-badge">5</span>
+    </a>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">AH</div>
+        <div class="user-info">
+          <p>Ahmad Hizam</p>
+          <span>Halal Executive</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">Dashboard</div>
+        <div class="topbar-subtitle">Overview · Last updated just now</div>
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-search">
+          <span>🔍</span> Search anything…
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showToast('Syncing all agents…','🔄','Starting sync')">
+          ⟳ Refresh
+        </button>
+      </div>
+    </header>
+
+    <div class="page-content fade-up">
+      <!-- Hero -->
+      <div class="hero-banner">
+        <div class="hero-title">Halal Certification Intelligence</div>
+        <div class="hero-sub">
+          AI-powered multi-agent system that reads your ingredient certificates, inspects your facility,
+          and builds your JAKIM submission pack — end to end.
+        </div>
+        <div class="hero-ctas">
+          <a href="materials.html"><button class="btn btn-primary">🧪 Run Material Check</button></a>
+          <a href="sitecheck.html"><button class="btn btn-secondary">🏭 View Site Inspection</button></a>
+          <a href="readiness.html"><button class="btn btn-secondary">📋 Open Readiness Pack</button></a>
+        </div>
+        <div class="cert-countdown">
+          <div class="cert-countdown-icon">⏱</div>
+          <div>
+            <p>JAKIM Audit Submission Deadline: 47 days remaining</p>
+            <span>Target: MS 1500:2019 · Application No. JAK-2026-00814</span>
+          </div>
+          <span class="tag tag-amber" style="margin-left:auto;">⚠ Action Required</span>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="grid-4" style="margin-bottom:24px;">
+        <div class="stat-card" style="--accent:var(--emerald)">
+          <span class="stat-label">Certified Ingredients</span>
+          <span class="stat-value glow-text">48</span>
+          <span class="stat-sub">of 63 total · 76%</span>
+          <span class="stat-icon">✅</span>
+        </div>
+        <div class="stat-card" style="--accent:var(--gold)">
+          <span class="stat-label">Pending Review</span>
+          <span class="stat-value" style="color:var(--gold)">9</span>
+          <span class="stat-sub">3 expiring within 30 days</span>
+          <span class="stat-icon">⏳</span>
+        </div>
+        <div class="stat-card" style="--accent:var(--rose)">
+          <span class="stat-label">Non-Compliant</span>
+          <span class="stat-value" style="color:var(--rose)">6</span>
+          <span class="stat-sub">Blocking submission</span>
+          <span class="stat-icon">🚫</span>
+        </div>
+        <div class="stat-card" style="--accent:var(--violet)">
+          <span class="stat-label">Readiness Score</span>
+          <span class="stat-value" style="color:var(--violet)">73%</span>
+          <span class="stat-sub">+8% since last week</span>
+          <span class="stat-icon">📈</span>
+        </div>
+      </div>
+
+      <!-- Middle Grid -->
+      <div class="grid-2" style="margin-bottom:24px;">
+        <!-- Readiness Gauge -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🎯 Certification Readiness</div>
+            <span class="card-badge badge-amber">In Progress</span>
+          </div>
+          <div class="readiness-gauge-section">
+            <div style="position:relative; width:180px; height:180px;">
+              <svg class="gauge-svg" width="180" height="180" viewBox="0 0 180 180">
+                <circle cx="90" cy="90" r="72" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"/>
+                <circle cx="90" cy="90" r="72" fill="none"
+                  stroke="url(#gaugeGrad)" stroke-width="14"
+                  stroke-linecap="round"
+                  stroke-dasharray="452.4"
+                  stroke-dashoffset="122" id="gaugeCircle"/>
+                <defs>
+                  <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%"   stop-color="#10b981"/>
+                    <stop offset="60%"  stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#f59e0b"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="gauge-center-text">
+                <span class="gauge-pct glow-text" id="gaugeNum">73%</span>
+                <span class="gauge-pct-lbl">Readiness</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                <span>Ingredient Register</span><span style="color:var(--emerald)">88%</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:88%; background:var(--emerald);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                <span>Site Inspection</span><span style="color:var(--gold)">62%</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:62%; background:var(--gold);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                <span>Documentation</span><span style="color:var(--violet)">71%</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:71%; background:var(--violet);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                <span>Halal Committee</span><span style="color:var(--sky)">55%</span>
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:55%; background:var(--sky);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔔 Alerts & Notifications</div>
+            <span class="card-badge badge-red">5 New</span>
+          </div>
+          <div class="notification-item">
+            <div class="notif-icon" style="background:rgba(244,63,94,0.12);">🚨</div>
+            <div class="notif-body">
+              <p>Palm Shortening (Vendor ID: V-041) certificate expired 12 days ago</p>
+              <span>Raw Material Agent · 2 hrs ago</span>
+            </div>
+          </div>
+          <div class="notification-item">
+            <div class="notif-icon" style="background:rgba(245,158,11,0.12);">⚠️</div>
+            <div class="notif-body">
+              <p>Soy Lecithin E322 certification expires in 28 days — renewal required</p>
+              <span>Monitor Agent · 5 hrs ago</span>
+            </div>
+          </div>
+          <div class="notification-item">
+            <div class="notif-icon" style="background:rgba(56,189,248,0.12);">🏭</div>
+            <div class="notif-body">
+              <p>Site inspection: 2 findings in Storage Room B need action before audit</p>
+              <span>Site Inspection Agent · Yesterday</span>
+            </div>
+          </div>
+          <div class="notification-item">
+            <div class="notif-icon" style="background:rgba(139,92,246,0.12);">📄</div>
+            <div class="notif-body">
+              <p>Halal Policy document ready for executive approval</p>
+              <span>Document Agent · Yesterday</span>
+            </div>
+          </div>
+          <div class="notification-item">
+            <div class="notif-icon" style="background:rgba(16,185,129,0.12);">✅</div>
+            <div class="notif-body">
+              <p>Vanilla Flavour (Halal) — certificate successfully verified by JAKIM grounding check</p>
+              <span>Grounding Agent · 2 days ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Pipeline Status -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <div class="card-title">🤖 Active Agent Pipeline</div>
+          <div style="display:flex;gap:8px;">
+            <span class="tag tag-green"><span class="dot dot-green"></span> 2 Running</span>
+            <span class="tag tag-amber">3 Waiting</span>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px;">
+          <div class="agent-row" style="flex-direction:column; text-align:center; gap:8px;">
+            <div class="agent-icon-wrap" style="background:rgba(16,185,129,0.12); margin:0 auto;">🔍</div>
+            <div>
+              <p style="font-size:12px; font-weight:600;">Extractor</p>
+              <span style="font-size:10px; color:var(--text-muted);">Claude Vision</span>
+            </div>
+            <span class="agent-status-chip chip-done">Done</span>
+          </div>
+          <div class="agent-row" style="flex-direction:column; text-align:center; gap:8px;">
+            <div class="agent-icon-wrap" style="background:rgba(56,189,248,0.12); margin:0 auto;">✔️</div>
+            <div>
+              <p style="font-size:12px; font-weight:600;">Verifier</p>
+              <span style="font-size:10px; color:var(--text-muted);">Grounding Check</span>
+            </div>
+            <span class="agent-status-chip chip-running">Running</span>
+          </div>
+          <div class="agent-row" style="flex-direction:column; text-align:center; gap:8px;">
+            <div class="agent-icon-wrap" style="background:rgba(245,158,11,0.12); margin:0 auto;">⚠️</div>
+            <div>
+              <p style="font-size:12px; font-weight:600;">Risk Agent</p>
+              <span style="font-size:10px; color:var(--text-muted);">E-code Rules</span>
+            </div>
+            <span class="agent-status-chip chip-waiting">Waiting</span>
+          </div>
+          <div class="agent-row" style="flex-direction:column; text-align:center; gap:8px;">
+            <div class="agent-icon-wrap" style="background:rgba(244,63,94,0.12); margin:0 auto;">📧</div>
+            <div>
+              <p style="font-size:12px; font-weight:600;">Follow-up</p>
+              <span style="font-size:10px; color:var(--text-muted);">Email Drafter</span>
+            </div>
+            <span class="agent-status-chip chip-waiting">Waiting</span>
+          </div>
+          <div class="agent-row" style="flex-direction:column; text-align:center; gap:8px;">
+            <div class="agent-icon-wrap" style="background:rgba(139,92,246,0.12); margin:0 auto;">📦</div>
+            <div>
+              <p style="font-size:12px; font-weight:600;">Pack Agent</p>
+              <span style="font-size:10px; color:var(--text-muted);">Submission</span>
+            </div>
+            <span class="agent-status-chip chip-idle">Idle</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section-header">
+        <div>
+          <div class="section-title">Quick Actions</div>
+          <div class="section-sub">Jump to common tasks</div>
+        </div>
+      </div>
+      <div class="quick-action-grid">
+        <a href="materials.html">
+          <div class="quick-action">
+            <div class="qa-icon">📂</div>
+            <div class="qa-label">Upload Certificate</div>
+          </div>
+        </a>
+        <a href="sitecheck.html">
+          <div class="quick-action">
+            <div class="qa-icon">🎥</div>
+            <div class="qa-label">Upload Walkthrough Video</div>
+          </div>
+        </a>
+        <a href="readiness.html">
+          <div class="quick-action">
+            <div class="qa-icon">📝</div>
+            <div class="qa-label">Draft Halal Policy</div>
+          </div>
+        </a>
+        <div class="quick-action" onclick="showToast('Generating submission pack…','📦','Pack Builder')">
+          <div class="qa-icon">📦</div>
+          <div class="qa-label">Build Submission Pack</div>
+        </div>
+        <div class="quick-action" onclick="showToast('Composing follow-up emails…','📧','Email Drafter')">
+          <div class="qa-icon">📧</div>
+          <div class="qa-label">Email Suppliers</div>
+        </div>
+        <a href="audit.html">
+          <div class="quick-action">
+            <div class="qa-icon">📜</div>
+            <div class="qa-label">View Audit Log</div>
+          </div>
+        </a>
+        <div class="quick-action" onclick="showToast('Running consistency check…','🔍','Cross-Check Agent')">
+          <div class="qa-icon">🔍</div>
+          <div class="qa-label">Run Consistency Check</div>
+        </div>
+        <div class="quick-action" onclick="showToast('Scheduling expiry alerts…','⏰','Alert Scheduler')">
+          <div class="qa-icon">⏰</div>
+          <div class="qa-label">Schedule Expiry Alerts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  function showToast(msg, icon='✅', title='HalalGuard') {
+    const tc = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<span class="toast-icon">${icon}</span>
+      <div class="toast-text"><p>${title}</p><span>${msg}</span></div>`;
+    tc.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+
+  // Animate gauge on load
+  window.addEventListener('load', () => {
+    const circle = document.getElementById('gaugeCircle');
+    if (circle) {
+      const full = 452.4;
+      const pct = 73;
+      const offset = full - (full * pct / 100);
+      setTimeout(() => { circle.style.strokeDashoffset = offset; circle.style.transition='stroke-dashoffset 1.2s ease'; }, 200);
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HalalGuard — Audit Log</title>
+  <meta name="description" content="Append-only audit log of every decision with evidence, timestamp, and actor"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    .audit-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; align-items:center; }
+    .audit-entry {
+      display:flex; gap:16px; align-items:flex-start;
+      padding:16px 0;
+      border-bottom:1px solid var(--border);
+      transition:var(--transition);
+    }
+    .audit-entry:hover { background:rgba(255,255,255,0.015); border-radius:var(--radius-sm); }
+    .audit-entry:last-child { border-bottom:none; }
+    .audit-index {
+      font-family:monospace; font-size:11px; color:var(--text-muted);
+      min-width:40px; padding-top:2px;
+    }
+    .audit-icon-wrap {
+      width:36px; height:36px; border-radius:8px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; flex-shrink:0;
+    }
+    .audit-body { flex:1; }
+    .audit-event { font-size:13px; font-weight:600; margin-bottom:3px; }
+    .audit-detail { font-size:12px; color:var(--text-secondary); line-height:1.5; }
+    .audit-meta { font-size:11px; color:var(--text-muted); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; }
+    .audit-hash { font-family:monospace; font-size:10px; color:rgba(255,255,255,0.15); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">☽</div>
+      <div class="brand-text"><h2>HalalGuard</h2><span>Certification AI</span></div>
+    </div>
+    <div class="sidebar-section-label">Overview</div>
+    <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+    <div class="sidebar-section-label">Features</div>
+    <a href="materials.html" class="nav-item"><span class="nav-icon">🧪</span> Raw Material Check<span class="nav-badge amber">3</span></a>
+    <a href="sitecheck.html" class="nav-item"><span class="nav-icon">🏭</span> Site Inspection<span class="nav-badge">2</span></a>
+    <a href="readiness.html" class="nav-item"><span class="nav-icon">📋</span> Readiness Pack<span class="nav-badge green">73%</span></a>
+    <div class="sidebar-section-label">Management</div>
+    <a href="audit.html" class="nav-item active"><span class="nav-icon">📜</span> Audit Log</a>
+    <a href="notifications.html" class="nav-item"><span class="nav-icon">🔔</span> Notifications<span class="nav-badge">5</span></a>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">AH</div>
+        <div class="user-info"><p>Ahmad Hizam</p><span>Halal Executive</span></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">Audit Log</div>
+        <div class="topbar-subtitle">Append-only · Every decision recorded with actor, timestamp, and evidence</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-secondary btn-sm" onclick="showToast('Exporting audit log to CSV…','📥','Export')">📥 Export CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Audit log verified: chain intact','🔐','Integrity Check')">🔐 Verify Integrity</button>
+      </div>
+    </header>
+
+    <div class="page-content fade-up">
+      <div class="grid-4" style="margin-bottom:24px;">
+        <div class="stat-card" style="--accent:var(--emerald)">
+          <span class="stat-label">Total Events</span>
+          <span class="stat-value glow-text">247</span>
+          <span class="stat-sub">Since 01-Sep-2026</span>
+        </div>
+        <div class="stat-card" style="--accent:var(--sky)">
+          <span class="stat-label">Today</span>
+          <span class="stat-value" style="color:var(--sky)">14</span>
+          <span class="stat-sub">Last: 09:47 MYT</span>
+        </div>
+        <div class="stat-card" style="--accent:var(--violet)">
+          <span class="stat-label">Approvals</span>
+          <span class="stat-value" style="color:var(--violet)">28</span>
+          <span class="stat-sub">5 rejections</span>
+        </div>
+        <div class="stat-card" style="--accent:var(--gold)">
+          <span class="stat-label">Agent Actions</span>
+          <span class="stat-value" style="color:var(--gold)">186</span>
+          <span class="stat-sub">63 human decisions</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📜 Event Log</div>
+          <span class="card-badge badge-muted">Append-only · SQLite</span>
+        </div>
+
+        <div class="audit-filters">
+          <span style="font-size:12px; color:var(--text-muted); font-weight:500;">Filter by:</span>
+          <button class="filter-btn active-all" onclick="filterAudit('all',this)">All</button>
+          <button class="filter-btn" onclick="filterAudit('agent',this)">🤖 Agent</button>
+          <button class="filter-btn" onclick="filterAudit('human',this)">👤 Human</button>
+          <button class="filter-btn" onclick="filterAudit('approve',this)">✅ Approvals</button>
+          <button class="filter-btn" onclick="filterAudit('alert',this)">🔔 Alerts</button>
+          <input type="text" placeholder="Search events…" style="font-size:12px; padding:6px 12px; margin-left:auto;" oninput="searchAudit(this.value)"/>
+        </div>
+
+        <div id="auditList">
+          <!-- Entries injected by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const AUDIT_DATA = [
+  {idx:'#247',type:'agent',  icon:'👁', bg:'rgba(56,189,248,0.12)',  event:'Grounding Agent — quote verified',    detail:'Vanilla Flavour cert: quote "Free from alcohol" matched at page 2, line 14 of vanilla_halal_cert_2026.jpg',actor:'Grounding Agent', time:'09:47 MYT', date:'09-Oct-2026', hash:'a3f9c1e'},
+  {idx:'#246',type:'human',  icon:'✅', bg:'rgba(16,185,129,0.12)',  event:'Ahmad Hizam approved Halal Policy v1.2',detail:'Evidence: Reviewed all 4 sections. Compliant with MS 1500:2019 Section 2.1. No amendments required.',       actor:'Ahmad Hizam',  time:'09:31 MYT', date:'09-Oct-2026', hash:'b72d4a1'},
+  {idx:'#245',type:'agent',  icon:'🔍', bg:'rgba(16,185,129,0.12)',  event:'Risk Agent — E-code check complete',   detail:'63 ingredients scanned. E120 (Carmine) flagged as HIGH RISK — animal-derived, no halal certificate.',  actor:'Risk Agent',    time:'09:14 MYT', date:'09-Oct-2026', hash:'c18f99b'},
+  {idx:'#244',type:'alert',  icon:'🚨', bg:'rgba(244,63,94,0.12)',   event:'Monitor — Certificate expired alert',  detail:'Palm Shortening (V-041): MY-H-12345 expired 28-Sep-2026. Email auto-sent to procurement@vendor-al-halal.com', actor:'Monitor Agent',time:'08:00 MYT', date:'09-Oct-2026', hash:'d40e22c'},
+  {idx:'#243',type:'agent',  icon:'📧', bg:'rgba(244,63,94,0.12)',   event:'Follow-up Agent — Email drafted & sent',detail:'Recipient: procurement@vendor-al-halal.com. Subject: Urgent cert renewal. Items: Palm Shortening, Soy Lecithin.',actor:'Follow-up Agent',time:'08:01 MYT', date:'09-Oct-2026', hash:'e91a337'},
+  {idx:'#242',type:'human',  icon:'✅', bg:'rgba(16,185,129,0.12)',  event:'Ahmad Hizam approved Process Flow Diagram',detail:'3 flow diagrams reviewed. Production, storage, and distribution flows confirmed compliant.',            actor:'Ahmad Hizam',  time:'16:22 MYT', date:'08-Oct-2026', hash:'f03b561'},
+  {idx:'#241',type:'agent',  icon:'🔄', bg:'rgba(139,92,246,0.12)', event:'Name Matching Agent — recipe cross-check', detail:'rapidfuzz matched 61/63 ingredients to certificates. 2 near-matches flagged: "Corn Starch" vs "Modified Corn Starch E1422".',actor:'Name Match Agent',time:'14:55 MYT', date:'08-Oct-2026', hash:'07c2d88'},
+  {idx:'#240',type:'human',  icon:'✕',  bg:'rgba(244,63,94,0.12)',  event:'Siti Hajar rejected HACCP draft v0.8',  detail:'Reason: CCP2 temperature threshold incorrect (70°C stated, should be 75°C). Returned for revision.',         actor:'Siti Hajar',   time:'11:40 MYT', date:'08-Oct-2026', hash:'1a5f72e'},
+  {idx:'#239',type:'agent',  icon:'👁', bg:'rgba(56,189,248,0.12)', event:'Inspection Agent — site scan complete',  detail:'284 frames analysed. 18/24 checklist items passed. 2 critical, 4 warnings. Findings linked to frames.',  actor:'Inspection Agent',time:'14:30 MYT',date:'07-Oct-2026', hash:'2b8834f'},
+  {idx:'#238',type:'alert',  icon:'⚠️', bg:'rgba(245,158,11,0.12)', event:'Monitor — 30-day expiry alert triggered', detail:'Soy Lecithin E322 (MUI-2024-871) expires 07-Nov-2026. Alert sent to Ahmad Hizam and Siti Hajar.',         actor:'Monitor Agent', time:'08:00 MYT', date:'07-Oct-2026', hash:'3c994a0'},
+  {idx:'#237',type:'human',  icon:'✅', bg:'rgba(16,185,129,0.12)', event:'Mohd Faiz approved Company Profile v2.0', detail:'Profile reviewed and confirmed accurate. Halal certification history correct.',                            actor:'Mohd Faiz',    time:'10:12 MYT', date:'06-Oct-2026', hash:'4d1b5c1'},
+  {idx:'#236',type:'agent',  icon:'📄', bg:'rgba(139,92,246,0.12)', event:'Document Agent — HACCP v0.9 drafted',    detail:'Claude + Jinja2 template. 3 CCPs identified. Document generated as .docx (18 pages).',                  actor:'Document Agent',time:'09:05 MYT', date:'06-Oct-2026', hash:'5e2c7d2'},
+  {idx:'#235',type:'agent',  icon:'📦', bg:'rgba(16,185,129,0.12)', event:'Pack Agent — submission index generated','detail':'9 documents indexed. 5 approved. Estimated total: 142 pages. 2 blocking items noted.',               actor:'Pack Agent',   time:'08:30 MYT', date:'05-Oct-2026', hash:'6f3d8e3'},
+  {idx:'#234',type:'human',  icon:'✅', bg:'rgba(16,185,129,0.12)', event:'Ahmad Hizam approved Ingredient Matrix v3', detail:'63 ingredients reviewed. 48 certified, 9 pending, 6 non-compliant. Matrix accepted as is.',           actor:'Ahmad Hizam',  time:'17:44 MYT', date:'04-Oct-2026', hash:'7a4e9f4'},
+];
+
+function renderAudit(data) {
+  const list = document.getElementById('auditList');
+  list.innerHTML = '';
+  data.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'audit-entry';
+    div.dataset.type = e.type;
+    div.dataset.text = (e.event + ' ' + e.detail + ' ' + e.actor).toLowerCase();
+    div.innerHTML = `
+      <div class="audit-index">${e.idx}</div>
+      <div class="audit-icon-wrap" style="background:${e.bg}">${e.icon}</div>
+      <div class="audit-body">
+        <div class="audit-event">${e.event}</div>
+        <div class="audit-detail">${e.detail}</div>
+        <div class="audit-meta">
+          <span>👤 ${e.actor}</span>
+          <span>🕐 ${e.time}</span>
+          <span>📅 ${e.date}</span>
+          <span class="audit-hash">${e.hash}</span>
+        </div>
+      </div>
+      <div>
+        ${e.type==='human'?'<span class="tag tag-violet">👤 Human</span>':e.type==='alert'?'<span class="tag tag-amber">🔔 Alert</span>':'<span class="tag tag-sky">🤖 Agent</span>'}
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+let currentAuditFilter = 'all';
+function filterAudit(type, btn) {
+  currentAuditFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.className='filter-btn');
+  if(btn) btn.classList.add('active-all');
+  document.querySelectorAll('.audit-entry').forEach(e=>{
+    const show = type==='all' || e.dataset.type===type ||
+      (type==='approve' && e.dataset.text.includes('approv'));
+    e.style.display = show ? '' : 'none';
+  });
+}
+function searchAudit(val) {
+  document.querySelectorAll('.audit-entry').forEach(e=>{
+    e.style.display = e.dataset.text.includes(val.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function showToast(msg, icon='✅', title='HalalGuard') {
+  const tc=document.getElementById('toastContainer');
+  const t=document.createElement('div'); t.className='toast';
+  t.innerHTML=`<span class="toast-icon">${icon}</span><div class="toast-text"><p>${title}</p><span>${msg}</span></div>`;
+  tc.appendChild(t); setTimeout(()=>t.remove(),4500);
+}
+
+renderAudit(AUDIT_DATA);
+</script>
+</body>
+</html>
