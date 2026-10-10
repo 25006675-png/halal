@@ -197,6 +197,63 @@ curl "http://127.0.0.1:8000/tasks/1"     # result holds the draft
 curl "http://127.0.0.1:8000/events?limit=20"
 ```
 
+### 5c. Narrowing it down when something fails
+
+Test in layers, bottom up. Each layer proves one thing, so you always know which part
+broke instead of staring at an agent wondering why it ignored you.
+
+| Layer | What it proves | How |
+|---|---|---|
+| 0 — smoke test | backend + MCP server work at all | `python smoke_test.py` |
+| 1 — tools visible | WorkBuddy actually connected to the connector | ask an ordinary chat "what tools do you have?" |
+| 2 — one tool call | the plumbing, separately from the agent | ask for one certificate, then one event |
+| 3 — the two agents | the instructions and the handoff | 5b |
+
+**Layer 1.** In an ordinary WorkBuddy chat — no expert needed — ask:
+
+> What tools do you have?
+
+You should see `get_certificates`, `post_event`, `create_task`, `get_my_tasks`,
+`complete_task`, `get_timeline`, `backend_health`. If none appear, the connector is not
+registered or not Trusted. WorkBuddy does not warn loudly about this; it just never calls
+an untrusted server.
+
+**Layer 2.** Still without the experts, in that same chat:
+
+> Use get_certificates to list the certificates for Mak Teh Sambal (sample), then use post_event to log that you checked.
+
+Expect 3 certificates back and a new row appearing on the live page
+<http://127.0.0.1:8000/events/view>. If this works, the connector round-trip is fine and
+any later failure is the agent's instructions, not the plumbing.
+
+### Test the two agents in two separate conversations
+
+This is the part most likely to give a false positive. If both agents run in the same
+WorkBuddy chat, the second one can simply read the first one's messages and appear to work
+— the handoff went through chat history, not through your MCP server. That proves nothing.
+
+Run them apart:
+
+- **Conversation A** — the Certificate Checker expert: *"Check the certificates for Mak Teh Sambal (sample)."*
+- **Conversation B** — a brand new chat with no shared history, the Supplier Chaser expert: *"Get your tasks and draft the messages."*
+
+If B still finds two tasks, the handoff genuinely travelled
+Certificate Checker → MCP server → backend → MCP server → Supplier Chaser. Chat history
+cannot fake that.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| The tools never appear in any chat | Connector not Trusted | Connector page → click **Trust** on `halalready` |
+| Tools listed but calls fail with 404 | MCP URL missing `/mcp` | Use `http://127.0.0.1:8100/mcp`, not `:8100` |
+| `backend_health` returns `{"ok": false, ...}` | Backend not running | `curl http://127.0.0.1:8000/health` |
+| Chaser says it has no tasks, but the checker created some | Agent name mismatch | `get_my_tasks(agent=...)` must equal the checker's `to_agent` string exactly — `Supplier Chaser`, both words |
+| Two handoff events for one certificate | The agent posted a handoff event manually | It should not; `create_task` logs the handoff itself. Tell it to drop the extra `post_event` |
+| Chaser offers to email or WhatsApp the supplier | Instruction drift | `supplier-chaser.md` is drafts only. Reply: "do not send anything, write the draft into `complete_task`" |
+| Agent declares the product halal | Instruction drift, the serious one | The files forbid it. If it still happens, make the rule the first sentence in the instructions |
+| Duplicate rows after a re-run | `smoke_test.py` appends | Reset: `rm backend/halalready.db*` and restart the backend |
+
 ### The sample case
 
 `Mak Teh Sambal (sample)` — 3 suppliers, checked against today's date:
