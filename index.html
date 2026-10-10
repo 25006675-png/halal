@@ -391,7 +391,7 @@ html.no-motion .bbc .fb, html.no-motion .bbc .burst, html.no-motion .sparkles { 
 .mq-card .chip { height: 22px; font-size: 12px; }
 
 /* Preview: the live dashboard tilting into view */
-.preview { padding-block: 0 clamp(72px, 9vw, 128px); }
+.preview { padding-block: clamp(72px, 9vw, 128px); }
 .preview-head { will-change: transform; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px 32px; margin-bottom: clamp(24px, 4vw, 40px); }
 .preview-copy { display: grid; gap: 14px; max-width: 720px; }
 .preview-stage { perspective: 1000px; }
@@ -805,6 +805,96 @@ img.logo-mark { width: auto !important; height: 30px; display: block; border-rad
 svg.logo-mark { width: auto !important; height: 30px; display: block; }
 .folder-mark svg.logo-mark { height: 54px; opacity: .35; filter: brightness(0) invert(1); }
 @media (max-width: 560px) { .nav .logo svg.lk { height: 26px; } }
+
+/* Problem: the certification gap as 100 dots, and the two groups it leaves */
+.gap { margin: 0; display: grid; gap: 16px; justify-items: start; }
+.gap-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: clamp(6px, .9vw, 10px); width: min(100%, 340px); }
+.gd { display: block; aspect-ratio: 1; border-radius: 50%; border: 1.5px solid #BFDCCB; background: transparent; opacity: 0; transform: scale(.4); transition: opacity .4s ease, transform .5s var(--spring), background .4s ease, border-color .4s ease, box-shadow .4s ease; transition-delay: var(--d); }
+.gap.in .gd { opacity: 1; transform: none; }
+.gd.on { border-color: var(--g2); }
+.gap.in .gd.on { background: var(--grad); border-color: transparent; box-shadow: 0 0 0 4px rgba(18, 160, 90, .14); transition-delay: calc(var(--d) + 700ms); animation: gd-pulse 2.8s 1.6s ease-in-out infinite; }
+@keyframes gd-pulse { 50% { box-shadow: 0 0 0 7px rgba(18, 160, 90, .06); } }
+.gap figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13.5px; color: var(--muted); }
+.gap-key { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #BFDCCB; display: inline-block; margin-left: 6px; }
+.gap-key:first-child { margin-left: 0; }
+.gap-key.on { background: var(--g2); border-color: var(--g2); }
+.gap-unit { flex-basis: 100%; }
+.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: clamp(40px, 5vw, 64px); }
+.grp { display: grid; gap: 10px; align-content: start; padding: clamp(22px, 2.6vw, 30px); border-radius: 20px; background: var(--surface); border: 1px solid var(--line); transition: transform .35s var(--ease), box-shadow .35s ease, border-color .25s ease; }
+.grp:hover { transform: translateY(-4px); box-shadow: 0 18px 36px -20px rgba(14, 138, 74, .45); border-color: #C6EBD6; }
+.grp-share { font-size: 14.5px; color: var(--muted); }
+.grp-share b { font-family: var(--font-head); font-weight: 750; font-size: 30px; letter-spacing: -.02em; color: var(--ink); margin-right: 6px; font-variant-numeric: tabular-nums; }
+.grp h3 { font-size: 19px; font-weight: 560; margin-bottom: 2px; }
+.grp p:not(.grp-share):not(.grp-fix) { color: var(--muted); font-size: 15.5px; }
+.grp-fix { margin-top: 8px; padding-top: 14px; border-top: 1px dashed #CFE7DA; font-size: 15px; color: var(--text); display: grid; gap: 4px; }
+.grp-fix-l { font-family: var(--font-head); font-weight: 700; font-size: 13px; color: var(--ink); }
+@media (max-width: 860px) { .groups { grid-template-columns: minmax(0, 1fr); } }
+
+/* Problem cards, simplified: share, bar, one pain line, one answer */
+.grp { gap: 12px; overflow: hidden; }
+.grp-share { display: flex; align-items: baseline; gap: 10px; font-size: 15px; }
+.grp-share b { font-size: clamp(40px, 4.6vw, 56px); line-height: 1; letter-spacing: -.035em; margin: 0; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: num-flow 6s linear infinite; }
+.grp-bar { position: relative; height: 10px; border-radius: 99px; background: #E3F1E9; overflow: hidden; margin: 2px 0 8px; }
+.grp-bar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--p) * 1%); min-width: 10px; border-radius: inherit; background: var(--grad); transform: scaleX(0); transform-origin: left; transition: transform 1.4s cubic-bezier(.2, .8, .2, 1) calc(var(--gd, 0ms) + 150ms); }
+.grp-bar i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); transform: translateX(-100%); }
+.grp.in .grp-bar i { transform: none; }
+.grp.in .grp-bar i::after { animation: bar-sheen 2.6s 1.6s ease-in-out infinite; }
+@keyframes bar-sheen { 60%, 100% { transform: translateX(100%); } }
+.grp h3 { font-size: 22px; font-weight: 640; font-family: var(--font-head); letter-spacing: -.01em; }
+.grp p.grp-pain { color: var(--muted); font-size: 16px; }
+.grp .grp-fix { margin-top: 6px; padding: 12px 14px; border: 0; border-radius: 14px; background: #EEF8F2; display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; color: var(--g3);
+  opacity: 0; transform: translateY(10px); transition: opacity .5s ease calc(var(--gd, 0ms) + 1.1s), transform .6s var(--spring) calc(var(--gd, 0ms) + 1.1s); }
+.grp.in .grp-fix { opacity: 1; transform: none; }
+.grp-ico { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; color: #fff; transform: scale(0); transition: transform .5s var(--spring) calc(var(--gd, 0ms) + 1.35s); }
+.grp-ico svg { width: 14px; height: 14px; stroke: #fff; stroke-width: 3; fill: none; }
+.grp.in .grp-ico { transform: none; }
+.grp:hover .grp-bar i { filter: saturate(1.25) brightness(1.05); }
+html.no-motion .grp .grp-fix, html.no-motion .grp .grp-ico { opacity: 1; transform: none; }
+html.no-motion .grp .grp-bar i { transform: none; }
+
+/* Problem split: one proportional bar, two columns under it */
+.split { margin-top: clamp(48px, 6vw, 80px); display: grid; gap: 18px; }
+.split-heads { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.sh { display: grid; gap: 4px; }
+.sh b { font-family: var(--font-head); font-weight: 750; font-size: clamp(44px, 6vw, 84px); line-height: .95; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.sh span { font-size: 15px; color: var(--muted); }
+.sh-out b { color: #2E3B34; }
+.sh-in { text-align: right; justify-items: end; }
+.sh-in b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: num-flow 6s linear infinite; }
+.split-bar { position: relative; display: flex; gap: 6px; height: clamp(44px, 5vw, 64px); }
+.split-bar i { display: block; height: 100%; border-radius: 16px; }
+.sb-out { flex: 1 1 auto; transform-origin: left; transform: scaleX(0); transition: transform 1.3s cubic-bezier(.2, .8, .2, 1);
+  background: repeating-linear-gradient(-45deg, #DCEFE4 0 10px, #EAF6EF 10px 20px); background-size: 28.28px 28.28px; border: 1px solid #CFE7DA; }
+.sb-in { flex: 0 0 max(calc(var(--p) * 1%), 30px); background: var(--grad); transform: scale(0); transition: transform .6s var(--spring) 1.15s;
+  box-shadow: 0 0 0 0 rgba(18, 160, 90, .35); }
+.split.in .sb-out { transform: none; animation: hatch 3s linear 1.3s infinite; }
+.split.in .sb-in { transform: none; animation: sb-pulse 2.4s ease-out 1.8s infinite; }
+@keyframes hatch { to { background-position: 28.28px 0; } }
+@keyframes sb-pulse { 0% { box-shadow: 0 0 0 0 rgba(18, 160, 90, .4); } 100% { box-shadow: 0 0 0 14px rgba(18, 160, 90, 0); } }
+.split-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin-top: 18px; }
+.sc { display: grid; gap: 10px; align-content: start; padding: 8px clamp(20px, 3vw, 40px) 8px 0; opacity: 0; transform: translateY(14px); filter: blur(6px);
+  transition: opacity .7s ease, transform .8s var(--spring), filter .7s ease; }
+.sc + .sc { padding: 8px 0 8px clamp(20px, 3vw, 40px); border-left: 1px solid #D5EADF; }
+.split.in .sc { opacity: 1; transform: none; filter: none; transition-delay: 1.2s; }
+.split.in .sc + .sc { transition-delay: 1.45s; }
+.sc-k { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.sw { width: 22px; height: 12px; border-radius: 4px; display: inline-block; }
+.sw-out { background: repeating-linear-gradient(-45deg, #CDE8D8 0 4px, #EAF6EF 4px 8px); border: 1px solid #CFE7DA; }
+.sw-in { background: var(--grad); }
+.sc h3 { font-family: var(--font-head); font-size: clamp(22px, 2.2vw, 28px); font-weight: 700; letter-spacing: -.02em; }
+.sc-pain { color: var(--muted); font-size: 16.5px; max-width: 42ch; }
+.sc-fix { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 15.5px; font-weight: 600; color: var(--g3); }
+.sc-fix .ico { width: 32px; height: 32px; flex: none; border-radius: 10px; display: grid; place-items: center; background: #E3F4EA; color: var(--g2); transition: transform .4s var(--spring), background .3s ease, color .3s ease; }
+.sc-fix .ico svg { width: 17px; height: 17px; }
+.sc:hover .sc-fix .ico { transform: rotate(-8deg) scale(1.1); background: var(--g2); color: #fff; }
+.sc:hover h3 { color: var(--ink); }
+.sc h3 { transition: color .3s ease; }
+html.no-motion .sb-out, html.no-motion .sb-in, html.no-motion .sc { transform: none; opacity: 1; filter: none; }
+@media (max-width: 760px) {
+  .split-cols { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .sc, .sc + .sc { padding: 0; border: 0; }
+  .sc + .sc { padding-top: 26px; border-top: 1px solid #D5EADF; }
+}
 
 /* ---------- Live demo: Input, Agents, Application Pack ----------
    A crisp tool look: square-ish boxes, hairline borders, small mono labels. */
@@ -1654,6 +1744,39 @@ svg.logo-mark { width: auto !important; height: 30px; display: block; }
       <div class="mq" id="mq"></div>
     </section>
 
+    <section class="section problem" id="problem" aria-labelledby="problem-h">
+      <div class="wrap">
+        <div class="section-head"><h2 class="h-section" id="problem-h">Halal in practice, <span class="h-soft">not on paper.</span></h2></div>
+        <div class="problem-grid">
+        <div class="problem-copy">
+        <p class="statement">Only <span class="num" data-roll>4.8%</span> of Malaysia&rsquo;s halal companies hold a JAKIM halal certificate: 9,520 out of about 200,000.</p>
+        </div>
+        <div class="problem-stamps" id="problem-stamps" aria-hidden="true"></div>
+        </div>
+        <div class="split" id="split" style="--p:4.8">
+          <div class="split-heads">
+            <p class="sh sh-out"><b data-roll>95.2%</b><span>without a certificate</span></p>
+            <p class="sh sh-in"><b data-roll>4.8%</b><span>with a certificate</span></p>
+          </div>
+          <div class="split-bar" aria-hidden="true"><i class="sb-out"></i><i class="sb-in"></i></div>
+          <div class="split-cols">
+            <div class="sc">
+              <p class="sc-k"><i class="sw sw-out"></i>The 95.2%</p>
+              <h3>Too costly to start</h3>
+              <p class="sc-pain">Consultants charge RM5,000&ndash;25,000 just to prepare the paperwork.</p>
+              <p class="sc-fix"><span class="ico-slot" data-ico="doc"></span>Halalah prepares the whole pack for the owner.</p>
+            </div>
+            <div class="sc">
+              <p class="sc-k"><i class="sw sw-in"></i>The 4.8%</p>
+              <h3>Easy to lose</h3>
+              <p class="sc-pain">JAKIM had revoked 3,068 certificates as of October 2024.</p>
+              <p class="sc-fix"><span class="ico-slot" data-ico="clock"></span>Renewal Watch flags expiring certificates early.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="preview" id="preview" aria-labelledby="preview-h">
       <div class="wrap">
         <div class="preview-head" id="preview-head">
@@ -1669,32 +1792,6 @@ svg.logo-mark { width: auto !important; height: 30px; display: block; }
               <div class="dash-host" id="embed-host" inert></div>
               <a class="preview-open" href="#demo"><span class="btn btn-ink"><span class="ico-slot" data-ico="play"></span>Open the live demo</span></a>
             </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section problem" id="problem" aria-labelledby="problem-h">
-      <div class="wrap">
-        <div class="section-head"><h2 class="h-section" id="problem-h">Paperwork is where small food makers <span class="h-soft">get stuck.</span></h2></div>
-        <div class="problem-grid">
-        <div class="problem-copy">
-        <p class="statement">JAKIM received <span class="num" data-roll>19,686</span> halal certification applications in 2024.<sup><a href="#src-1" aria-label="Source 1">1</a></sup> By October that year, <span class="num" data-roll>3,068</span> Malaysian halal certifications had been revoked for non-compliance.<sup><a href="#src-2" aria-label="Source 2">2</a></sup></p>
-        </div>
-        <div class="problem-stamps" id="problem-stamps" aria-hidden="true"></div>
-        </div>
-        <div class="facts">
-          <div class="fact" data-spot>
-            <h3>Documents are the hard part</h3>
-            <p>SMEs name documentation as a top challenge.<sup><a href="#src-3" aria-label="Source 3">3</a></sup></p>
-          </div>
-          <div class="fact" data-spot>
-            <h3>Missed deadlines cost certificates</h3>
-            <p>Late corrective action leads to suspension, then revocation.<sup><a href="#src-4" aria-label="Source 4">4</a></sup></p>
-          </div>
-          <div class="fact" data-spot>
-            <h3>Supplier certificates change</h3>
-            <p>In 2025, JAKIM withdrew recognition from three foreign bodies.<sup><a href="#src-5" aria-label="Source 5">5</a></sup></p>
           </div>
         </div>
       </div>
@@ -1886,11 +1983,10 @@ svg.logo-mark { width: auto !important; height: 30px; display: block; }
       <div class="foot-src">
         <h2>Sources</h2>
         <ol>
-          <li id="src-1"><a href="https://thesun.my/malaysia-news/jakim-investigates-hospital-catering-firm-without-halal-certification-fc14524067/" target="_blank" rel="noopener">JAKIM received 19,686 applications in 2024</a> <span>Bernama via theSun, 2025</span></li>
-          <li id="src-2"><a href="https://nst.com.my/amp/news/nation/2024/10/1118512/jakim-revokes-over-3000-halal-certifications-non-compliance-watch" target="_blank" rel="noopener">Jakim revokes over 3,000 halal certifications</a> <span>New Straits Times, Oct 2024</span></li>
-          <li id="src-3"><a href="https://jurnalumran.utm.my/index.php/umran/article/view/726" target="_blank" rel="noopener">Halal certification among F&amp;B SMEs in northern Johor</a> <span>Jurnal Umran, UTM</span></li>
-          <li id="src-4"><a href="https://www.freemalaysiatoday.com/category/nation/2024/10/12/3068-halal-certificates-revoked-as-of-yesterday-says-jakim" target="_blank" rel="noopener">3,068 halal certificates revoked</a> <span>Free Malaysia Today, Oct 2024</span></li>
-          <li id="src-5"><a href="https://www.bernama.com/en/general/news.php?id=2397805" target="_blank" rel="noopener">Products by three foreign certification bodies banned</a> <span>Bernama, Feb 2025</span></li>
+          <li id="src-1"><a href="https://www.utusan.com.my/berita/2024/11/57-peratus-pemegang-sijil-halal-babit-syarikat-bukan-bumiputera/" target="_blank" rel="noopener">9,520 companies hold halal certificates</a> <span>Utusan Malaysia, Nov 2024</span></li>
+          <li id="src-2"><a href="https://www.thevibes.com/articles/news/64184/only-5-of-200000-halal-companies-hold-jakim-certifications-hdc" target="_blank" rel="noopener">Only 5% of 200,000 halal companies hold JAKIM certification</a> <span>The Vibes, quoting HDC, Jun 2022</span></li>
+          <li id="src-3"><a href="https://www.freemalaysiatoday.com/category/nation/2024/09/26/halal-certification-what-does-it-entail" target="_blank" rel="noopener">Halal certification: what does it entail?</a> <span>Free Malaysia Today, Sep 2024</span></li>
+          <li id="src-4"><a href="https://www.freemalaysiatoday.com/category/nation/2024/10/12/3068-halal-certificates-revoked-as-of-yesterday-says-jakim" target="_blank" rel="noopener">Jakim revokes 3,068 halal certificates</a> <span>Free Malaysia Today, Oct 2024</span></li>
         </ol>
       </div>
     </div>
@@ -2824,7 +2920,7 @@ function tickTo(el, to, dur = 600) {
 /* Scroll reveal: blocks rise out of a blur, staggered within their group */
 function initReveal() {
   if (reduced()) return;
-  const groups = ['.facts > .fact', '.steps > .step', '#flow', '.roster-list > li', '.roster-detail', '.ev-tabs > .ev-tab', '.ev-panel', '.stack-list > li', '#layers', '.pack-files > li', '.pack-todo', '.faq-list > details', '.cta-panel', '.problem-copy', '.strip .mq', '.foot-grid > div'];
+  const groups = ['.facts > .fact', '.groups > .grp', '.steps > .step', '#flow', '.roster-list > li', '.roster-detail', '.ev-tabs > .ev-tab', '.ev-panel', '.stack-list > li', '#layers', '.pack-files > li', '.pack-todo', '.faq-list > details', '.cta-panel', '.problem-copy', '.strip .mq', '.foot-grid > div'];
   const els = [];
   groups.forEach(sel => $$(sel).forEach((el, i) => { el.classList.add('rv-wait'); el._rvd = Math.min(i, 8) * 70; els.push(el); }));
   const o = new IntersectionObserver(es => es.forEach(e => {
@@ -4038,7 +4134,10 @@ function initPreview() {
 function initRoll() {
   $$('[data-roll]').forEach(el => {
     const final = el.textContent;
-    const target = parseInt(final.replace(/\D/g, ''), 10);
+    const raw = final.replace(/[^\d.]/g, '');
+    const target = parseFloat(raw);
+    const dp = raw.includes('.') ? raw.split('.')[1].length : 0;
+    const suffix = final.replace(/[\d.,]/g, '');
     io(el, vis => {
       if (!vis || el._done || reduced()) return;
       el._done = true;
@@ -4046,7 +4145,7 @@ function initRoll() {
       const step = now => {
         const k = Math.min(1, (now - t0) / dur);
         const e = 1 - Math.pow(1 - k, 3);
-        el.textContent = Math.round(target * e).toLocaleString('en-US');
+        el.textContent = (target * e).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }) + suffix;
         if (k < 1) requestAnimationFrame(step); else el.textContent = final;
       };
       requestAnimationFrame(step);
@@ -4081,6 +4180,14 @@ function initProblemStamps() {
       ], { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1)' });
     }
   }, { threshold: .5 });
+}
+
+/* Problem split: one bar shows the whole industry, then each side explains itself */
+function initGroups() {
+  const el = $('#split');
+  if (!el) return;
+  if (reduced()) { el.classList.add('in'); return; }
+  io(el, vis => { if (vis) el.classList.add('in'); }, { threshold: .4 });
 }
 
 /* How it works: one prompt flowing through the team */
@@ -4548,6 +4655,7 @@ function boot() {
   initPreview();
   initRoll();
   initProblemStamps();
+  initGroups();
   initFlow();
   initRoster();
   initEvidence();
