@@ -32,14 +32,17 @@ def certificate_status(cert: dict | None, today: date) -> str:
     """
     Status of an ingredient from its latest certificate:
       1. no certificate on file          -> missing
-      2. issuer known to be unrecognised -> unrecognised_issuer
-      3. expiry before today             -> expired
-      4. expiry within 60 days           -> expiring
-      5. otherwise                       -> valid
+      2. the scan could not be read      -> unclear
+      3. issuer known to be unrecognised -> unrecognised_issuer
+      4. expiry before today             -> expired
+      5. expiry within 60 days           -> expiring
+      6. otherwise                       -> valid
     Source documents (natural ingredients) have no expiry and count as valid.
     """
     if cert is None:
         return "missing"
+    if cert.get("legible") == 0:
+        return "unclear"
     if cert.get("issuer_recognised") == 0:
         return "unrecognised_issuer"
     days = days_to_expiry(cert.get("expiry_date"), today)

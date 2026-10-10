@@ -1,0 +1,18 @@
+{
+  "source": "JAKIM, Malaysian halal certification: JAKIM and the State Islamic Religious Departments (JAIN/MAIN) issue domestic halal certificates. Foreign bodies: JAKIM's list of recognised foreign halal certification bodies, https://www.halal.gov.my",
+  "note": "Demo subset only. Before real use, add every state body and the full recognised foreign list (96 bodies, August 2026), each with its source date.",
+  "bodies": [
+    {
+      "name": "Jabatan Kemajuan Islam Malaysia (JAKIM)",
+      "short_name": "JAKIM",
+      "aliases": ["Jabatan Kemajuan Islam Malaysia", "Department of Islamic Development Malaysia"],
+      "scope": "domestic"
+    },
+    {
+      "name": "Jabatan Agama Islam Selangor (JAIS)",
+      "short_name": "JAIS",
+      "aliases": ["Jabatan Agama Islam Selangor", "Selangor Islamic Religious Department"],
+      "scope": "domestic, Selangor"
+    }
+  ]
+}

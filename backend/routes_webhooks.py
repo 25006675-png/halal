@@ -74,7 +74,9 @@ async def record_reply(db, supplier: dict | None, approval: dict | None, text: s
             db, business_id, "supplier_chaser", "certificate_checker",
             f"Check new certificate from {who}" + (f" for {ingredient['name']}" if ingredient else ""),
             detail=text or None, payload=payload,
-            event_label=f"New certificate from {who}"[:120])
+            event_label=f"New certificate from {who}"[:120],
+            message=f"{who} just replied with a file"
+                    + (f" for {ingredient['name'].lower()}" if ingredient else "") + ". Can you check it?")
     else:
         task = await state.create_task(
             db, business_id, "system", "supplier_chaser", f"Read reply from {who}"[:200],

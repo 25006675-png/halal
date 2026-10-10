@@ -1,0 +1,8 @@
+google-genai==2.29.0
+httpx==0.28.1
+python-dotenv==1.1.0
+pillow==12.3.0
+numpy==2.5.3
+# Excel and Word uploads are turned into text before Gemini reads them
+openpyxl==3.1.5
+python-docx==1.2.0

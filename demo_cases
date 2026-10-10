@@ -1,0 +1,137 @@
+# HalalReady — Sample case: Mak Teh Sambal (fictional)
+
+All names, companies, brands, numbers and documents below are **fictional** and must be labelled "SAMPLE — FICTIONAL" on every file. Before finalising, quickly search each company and brand name to make sure it doesn't match a real business.
+
+**Fixed demo date:** 15 Oct 2026 (set with the backend's "today" override so every run gives the same results).
+**Date jump for Renewal Watch:** 15 Feb 2027.
+
+---
+
+## 1. The company
+
+| Field | Value |
+|---|---|
+| Company | Mak Teh Sambal Sdn Bhd |
+| Owner | Siti Rahmah binti Yusof ("Mak Teh") |
+| Halal supervisor | Nurul Ain binti Hassan |
+| Staff | 6 production workers |
+| Premises | Small factory unit, Shah Alam, Selangor |
+| Goal | Halal certification to supply a supermarket chain |
+| Products | Sambal Tumis Mak Teh (250 g jar), Sambal Ikan Bilis Mak Teh (250 g jar) |
+
+---
+
+## 2. Ingredients, suppliers and certificates
+
+| # | Ingredient | Used in | Supplier | Certificate | Planted issue |
+|---|---|---|---|---|---|
+| 1 | Dried chilli | Both | Syarikat Cili Maju | JAKIM, **expired 14 Aug 2026** | **Expired** |
+| 2 | Cooking oil (palm) | Both | Minyak Murni Sdn Bhd | **None uploaded** | **Missing** (live supplier reply in demo) |
+| 3 | Shallot paste | Both | Bawang Segar Enterprise | JAKIM, valid to 30 Jun 2027 | None |
+| 4 | Garlic paste | Both | Bawang Segar Enterprise | JAKIM, valid to **28 Feb 2027** | Renewal Watch: alert after date jump |
+| 5 | Belacan (shrimp paste) | Sambal Tumis | Belacan Pak Long | JAKIM, valid to 31 Mar 2027, but **covers "Cincalok" only** | **Wrong product** |
+| 6 | Ikan bilis (dried anchovies) | Sambal Ikan Bilis | Hasil Laut Kuala | State religious dept, valid to 30 Sep 2027 | None |
+| 7 | Sugar | Both | Gula Manis Sdn Bhd | JAKIM, valid to **31 Mar 2027** | Renewal Watch: renewal task after date jump |
+| 8 | Salt | Both | Garam Laut Trading | JAKIM, valid to 31 Dec 2027, **blurry scan** | **Unclear document** |
+| 9 | Tamarind paste (imported) | Sambal Tumis | Asam Jawa Trading | Issued by "Halal Council of Eastland" (fictional, **not on recognised list**), valid to 31 Jan 2028 | **Unrecognised issuer** |
+
+**For the demo, only show:** #1 expired, #2 missing (live reply), and the undeclared oil brand on site. The other planted issues are for tuning the agents; the agents should still find them in the recorded run.
+
+---
+
+## 3. Files in the pile (the "drop" in the demo)
+
+| # | File | Tray | Notes |
+|---|---|---|---|
+| F1 | SSM business registration | Company | |
+| F2 | Premises licence (Majlis Bandaraya Shah Alam, fictional number) | Company | |
+| F3 | Company profile and organisation chart | Company | Names owner and halal supervisor |
+| F4 | Recipe — Sambal Tumis | Products | Lists ingredients 1, 2, 3, 4, 5, 7, 8, 9 |
+| F5 | Recipe — Sambal Ikan Bilis | Products | Lists ingredients 1, 2, 3, 4, 6, 7, 8 |
+| F6 | Product label photos (both jars) | Products | |
+| F7 | Supplier list (8 suppliers with WhatsApp numbers) | Suppliers | Teammate's phone as Minyak Murni's number |
+| F8–F14 | Halal certificates for ingredients 1, 3/4 (one cert), 5, 6, 7, 8, 9 | Suppliers | 7 files; no certificate for cooking oil |
+| F15 | Invoice from Minyak Murni Sdn Bhd (cooking oil, 10 × 17 kg tins) | Suppliers | **Ambiguous file:** an invoice that also proves the oil supplier; Coordinator should file it under Suppliers |
+| F16–F20 | Site photos: store, processing, packing, cleaning area, waste | Site | See section 4 |
+
+**Kept back for the demo:**
+- **Reply certificate:** Minyak Murni Sdn Bhd, JAKIM, cooking oil, valid to 30 Jun 2027 (sent from the teammate's phone).
+- **Spare certificate for judges:** renewed dried chilli certificate from Syarikat Cili Maju, valid to 31 Aug 2028.
+
+---
+
+## 4. Site photos (five zones)
+
+| Zone | What the photo shows | Planted issue |
+|---|---|---|
+| Raw material store | Labelled shelves; Minyak Murni oil tins, chilli sacks, sugar and salt bags, **plus two tins of "SuriaGold" cooking oil** (fictional, cheaper, not on the declared list) | **Undeclared brand** |
+| Processing area | Clean stainless steel tables, woks, labelled containers | None |
+| Packing area | Jars being labelled, labels match the two products | None |
+| Cleaning area | Handwash sink with soap; **detergent bottles on the same shelf as packed shallot paste** | **Chemicals near food** |
+| Waste area | Covered bins outside the processing door | None |
+
+Records the photos can't show (Inspector should ask for them): **pest control service report** (not in the pile), cleaning schedule.
+
+---
+
+## 5. Answer key (what a correct run produces)
+
+### Coordinator
+- Sorts F1–F20 into the four trays; files F15 (invoice) under **Suppliers**.
+- No missing-input request for company documents; may ask for the pest control report only if the Inspector hasn't.
+- Creates first tasks for Certificate Checker, Document Writer, On-site Inspector.
+- Final status sentence mentions the open supplier issues, e.g. "You're about 60% ready. Three suppliers need to send updated certificates."
+- After all tasks close: assembles the pack and requests the owner's review.
+
+### Certificate Checker
+| Ingredient | Expected result | Handoff |
+|---|---|---|
+| Dried chilli | Issue: expired 14 Aug 2026 | Task → Supplier Chaser |
+| Cooking oil | Issue: missing | Task → Supplier Chaser |
+| Shallot paste, garlic paste, ikan bilis, sugar | OK | — |
+| Belacan | Issue: certificate covers a different product | Task → Supplier Chaser |
+| Salt | Unclear document | Approval request → owner |
+| Tamarind paste | Issue: issuer not recognised | Task → Supplier Chaser |
+
+- Summary: **9 checked: 4 ok, 4 issues, 1 needs owner check.**
+- Then: task → Document Writer (ingredient and supplier list), task → On-site Inspector (declared brands).
+- On "Is SuriaGold certified?": not declared → issue, approval request asking the owner which supplier it comes from.
+- After Minyak Murni reply: cooking oil → **OK**.
+
+### Supplier Chaser
+- 4 draft messages (chilli, oil, belacan, tamarind), each waiting for approval, in Malay by default.
+- After the oil reply: files the certificate, task → Certificate Checker "New certificate received".
+
+### Document Writer
+- Drafts halal policy first, then ingredient control and traceability procedures once the list arrives.
+- Uses the real (fictional) names: both products, 9 ingredients, 8 suppliers, 5 zones, Nurul Ain as halal supervisor.
+- Marks unknowns as [TO CONFIRM], e.g. who receives deliveries.
+- 3 review requests to the owner.
+
+### On-site Inspector
+| Zone | Expected status |
+|---|---|
+| Store | Possible issue: SuriaGold oil not on declared list → task to Certificate Checker |
+| Processing | OK |
+| Packing | OK |
+| Cleaning area | Possible issue: detergent stored next to food |
+| Waste | OK |
+
+- Summary: **5 zones: 3 ok, 2 possible issues.**
+- Asks the owner to upload the pest control report and cleaning schedule.
+- Sends zone details to Document Writer.
+
+### Renewal Watch
+- On 15 Oct 2026: **nothing to do** (everything expiring is already being chased; no certificates within 60 days).
+- After the jump to 15 Feb 2027:
+  - Garlic paste (28 Feb 2027, 13 days) → task to Supplier Chaser **and** owner alert.
+  - Sugar (31 Mar 2027, 44 days) → task to Supplier Chaser, no alert.
+  - Shallot paste shares the garlic certificate → should not create a duplicate task.
+
+---
+
+## 6. Who makes what (Person 3)
+
+- Certificates and documents: simple, clearly fake templates (no JAKIM logo, "SAMPLE — FICTIONAL" watermark).
+- Site photos: stage them in a kitchen or use stock photos with permission; add the SuriaGold tins with a printed label.
+- Keep everything in `sample_case/` with the file numbers above, so agents and answer key match.

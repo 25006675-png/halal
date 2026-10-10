@@ -1,0 +1,20 @@
+{
+  "halal_policy": {
+    "title": "Halal Policy",
+    "sections": ["Policy statement", "Scope", "Halal supervisor", "Commitments", "Approval"],
+    "min_chars": 600,
+    "source": "Summarised from Malaysian Halal Certification Procedure Manual (MPPHM) internal halal control requirements and MS 1500:2019 management responsibility. To be confirmed against the official texts."
+  },
+  "ingredient_control": {
+    "title": "Ingredient Control Procedure",
+    "sections": ["Purpose", "Approved suppliers", "Receiving checks", "Certificate monitoring", "Non-conforming materials", "Records"],
+    "min_chars": 900,
+    "source": "Summarised from MS 1500:2019 (sourcing of raw materials) and MPPHM supporting documents. To be confirmed against the official texts."
+  },
+  "traceability": {
+    "title": "Traceability Procedure",
+    "sections": ["Purpose", "Batch coding", "Records", "Tracing a product", "Recall"],
+    "min_chars": 700,
+    "source": "Summarised from MS 1500:2019 (traceability) and MPPHM supporting documents. To be confirmed against the official texts."
+  }
+}

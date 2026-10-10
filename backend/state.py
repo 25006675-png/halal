@@ -51,7 +51,7 @@ hub = EventHub()
 async def post_event(
     db, business_id: int, agent: str, label: str, status: str,
     handed_to: str | None = None, task_id: int | None = None,
-    approval_id: int | None = None, run_id: int | None = None,
+    approval_id: int | None = None, run_id: int | None = None, message: str | None = None,
 ) -> dict:
     """Store an event, commit, and push it to the live stream."""
     if run_id is None:
@@ -59,7 +59,7 @@ async def post_event(
         run_id = run["id"] if run else None
     event = {
         "business_id": business_id, "run_id": run_id, "agent": agent,
-        "label": label, "status": status, "handed_to": handed_to,
+        "label": label, "message": message, "status": status, "handed_to": handed_to,
         "task_id": task_id, "approval_id": approval_id, "created_at": now_iso(),
     }
     event["id"] = await insert(db, "events", event)
@@ -138,7 +138,7 @@ async def ingredient_rows(db, business_id: int, today: date) -> list[dict]:
         db,
         """SELECT i.*, s.name AS supplier_name,
                   c.id AS cert_id, c.issuer, c.cert_number, c.expiry_date,
-                  c.issuer_recognised, c.file_id AS cert_file_id
+                  c.issuer_recognised, c.legible, c.file_id AS cert_file_id
            FROM ingredients i
            LEFT JOIN suppliers s ON s.id = i.supplier_id
            LEFT JOIN certificates c ON c.id = (
@@ -160,7 +160,8 @@ async def ingredient_rows(db, business_id: int, today: date) -> list[dict]:
     for r in rows:
         cert = None
         if r["cert_id"] is not None:
-            cert = {"issuer_recognised": r["issuer_recognised"], "expiry_date": r["expiry_date"]}
+            cert = {"issuer_recognised": r["issuer_recognised"], "expiry_date": r["expiry_date"],
+                    "legible": r["legible"]}
         r["status"] = calc.certificate_status(cert, today)
         r["days_to_expiry"] = calc.days_to_expiry(r["expiry_date"], today)
         r["issuer_recognised"] = None if r["issuer_recognised"] is None else bool(r["issuer_recognised"])
@@ -214,7 +215,8 @@ async def upkeep_check(db, business_id: int) -> list[dict]:
     for ing in await ingredient_rows(db, business_id, today):
         if ing["status"] not in ("expiring", "expired") or ing["cert_id"] is None:
             continue
-        ref = f"renewal:cert:{ing['cert_id']}"
+        # One certificate file can cover several ingredients (shallot and garlic paste): one task for it.
+        ref = f"renewal:file:{ing['cert_file_id']}" if ing["cert_file_id"] else f"renewal:cert:{ing['cert_id']}"
         if await fetch_one(db, "SELECT id FROM tasks WHERE ref = ?", (ref,)):
             continue
         days = ing["days_to_expiry"]
@@ -269,7 +271,7 @@ def safe_filename(name: str) -> str:
 async def create_task(
     db, business_id: int, from_agent: str, assignee: str, title: str,
     detail: str | None = None, payload: dict | None = None, ref: str | None = None,
-    event_label: str | None = None, run_id: int | None = None,
+    event_label: str | None = None, run_id: int | None = None, message: str | None = None,
 ) -> dict:
     """Put a task on the board and post the handoff event that draws the line on the graph."""
     if run_id is None:
@@ -284,7 +286,7 @@ async def create_task(
     task["id"] = await insert(db, "tasks", task)
     event = await post_event(
         db, business_id, from_agent, event_label or title, "action",
-        handed_to=assignee, task_id=task["id"], run_id=run_id,
+        handed_to=assignee, task_id=task["id"], run_id=run_id, message=message,
     )
     task["payload"] = payload
     return {**task, "event_id": event["id"]}

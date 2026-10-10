@@ -43,6 +43,7 @@ AGENTS = [
     "document_writer",
     "onsite_inspector",
     "renewal_watch",
+    "auditor",
 ]
 # Event authors that are not agents: the owner's dashboard actions and the
 # backend itself (date jumps, incoming replies, fallbacks).
@@ -74,7 +75,7 @@ async def connect():
         await db.close()
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 5
 
 
 async def init_db():
@@ -225,6 +226,7 @@ CREATE TABLE IF NOT EXISTS certificates (
     cert_number       TEXT,
     expiry_date       TEXT,              -- NULL for source documents
     issuer_recognised INTEGER,           -- 1, 0, or NULL when not checked
+    legible           INTEGER NOT NULL DEFAULT 1,  -- 0 = the scan could not be read; status 'unclear'
     file_id           INTEGER REFERENCES files(id),
     created_at        TEXT NOT NULL
 );
@@ -281,12 +283,14 @@ CREATE TABLE IF NOT EXISTS approvals (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     business_id   INTEGER NOT NULL REFERENCES businesses(id),
     run_id        INTEGER REFERENCES runs(id),
-    kind          TEXT NOT NULL {_check('kind', ['message', 'document'])},
+    kind          TEXT NOT NULL {_check('kind', ['message', 'document', 'question', 'plan'])},
     requested_by  TEXT NOT NULL,
     title         TEXT NOT NULL,
     supplier_id   INTEGER REFERENCES suppliers(id),
     ingredient_id INTEGER REFERENCES ingredients(id),
     document_id   INTEGER REFERENCES documents(id),
+    file_id       INTEGER REFERENCES files(id),   -- question: the file it is about
+    payload       TEXT,                  -- plan: JSON list of the tasks it will start
     body_ms       TEXT,
     body_en       TEXT,
     status        TEXT NOT NULL DEFAULT 'pending'
@@ -311,6 +315,7 @@ CREATE TABLE IF NOT EXISTS events (
     run_id      INTEGER REFERENCES runs(id),
     agent       TEXT NOT NULL {_check('agent', ACTORS)},
     label       TEXT NOT NULL,
+    message     TEXT,                    -- what the agent says to the agent it hands to / answers (speech bubble)
     status      TEXT NOT NULL {_check('status', EVENT_STATUSES)},
     handed_to   TEXT {_check('handed_to', AGENTS, nullable=True)},
     task_id     INTEGER REFERENCES tasks(id),

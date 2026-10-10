@@ -17,7 +17,7 @@ async def seed():
             return
         await insert(db, "businesses", {
             "id": 1,
-            "name": "Sambal Mak Teh Enterprise (sample, fictional)",
+            "name": "Mak Teh Sambal Sdn Bhd (sample, fictional)",
             "owner_name": "Mak Teh",
             "owner_phone": os.getenv("DEMO_OWNER_PHONE") or None,
             "owner_telegram_chat_id": os.getenv("TELEGRAM_OWNER_CHAT_ID") or None,

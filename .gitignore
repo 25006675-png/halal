@@ -8,6 +8,10 @@
 *.sqlite3
 backend/uploads/
 
+# Agent file-reading cache and demo snapshots (rebuilt locally)
+.cache/
+snapshots/
+
 # Python
 __pycache__/
 *.pyc

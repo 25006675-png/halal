@@ -100,6 +100,7 @@ async def admin_reset():
 
 class StartRun(BaseModel):
     mode: Literal["prepare", "upkeep"] = "prepare"
+    instruction: Optional[str] = None   # the owner's one prompt; becomes the Coordinator's first task
 
 
 @router.post("/business/{business_id}/runs")
@@ -110,6 +111,10 @@ async def start_run(business_id: int, req: StartRun = StartRun()):
         await db.execute("UPDATE runs SET finished_at = ? WHERE business_id = ? AND finished_at IS NULL",
                          (now, business_id))
         run_id = await insert(db, "runs", {"business_id": business_id, "mode": req.mode, "started_at": now})
+        await db.commit()
+        if req.instruction:
+            await state.create_task(db, business_id, "owner", "coordinator", req.instruction.strip()[:200],
+                                    run_id=run_id, event_label=req.instruction.strip()[:120])
     return {"id": run_id, "business_id": business_id, "mode": req.mode, "started_at": now}
 
 
@@ -369,6 +374,8 @@ async def approve(approval_id: int, req: Approve = Approve()):
             raise HTTPException(404, "Approval not found")
         if a["status"] not in ("pending", "failed"):
             raise HTTPException(409, f"Already {a['status']}")
+        if a["kind"] == "question":
+            raise HTTPException(409, "A question is answered with POST /approvals/{id}/answer")
         now = now_iso()
         edits = {k: v for k, v in {"body_ms": req.body_ms, "body_en": req.body_en}.items() if v is not None}
         await update(db, "approvals", approval_id, {**edits, "status": "approved", "decided_at": now})
@@ -379,6 +386,14 @@ async def approve(approval_id: int, req: Approve = Approve()):
 
         if a["kind"] == "document":
             await update(db, "documents", a["document_id"], {"status": "approved", "updated_at": now})
+            return await fetch_one(db, "SELECT * FROM approvals WHERE id = ?", (approval_id,))
+
+        if a["kind"] == "plan":
+            # Approved: every step of the plan becomes a task, handed over by the Coordinator.
+            for step in json.loads(a["payload"] or "[]"):
+                await state.create_task(db, a["business_id"], a["requested_by"], step["assignee"], step["title"][:200],
+                                        detail=step.get("detail"), message=step.get("message"),
+                                        run_id=a["run_id"])
             return await fetch_one(db, "SELECT * FROM approvals WHERE id = ?", (approval_id,))
 
         supplier = await fetch_one(db, "SELECT * FROM suppliers WHERE id = ?", (a["supplier_id"],))
@@ -450,6 +465,78 @@ async def send_fallback(db, a: dict) -> dict:
     await state.post_event(db, a["business_id"], "supplier_chaser",
                            "No WhatsApp reply; re-sent on Telegram", "attention", approval_id=a["id"])
     return {"fallback": True, "channel": "telegram"}
+
+
+async def _save_uploads(business_id: int, uploads: list[UploadFile], category: str | None,
+                        kind: str | None, supplier_id: int | None = None) -> list[tuple[int, str]]:
+    target = UPLOAD_DIR / "files"
+    target.mkdir(parents=True, exist_ok=True)
+    saved = []
+    async with connect() as db:
+        for upload in uploads:
+            name = state.safe_filename(upload.filename)
+            rel = f"files/{uuid.uuid4().hex[:8]}_{name}"
+            with open(UPLOAD_DIR / rel, "wb") as out:
+                shutil.copyfileobj(upload.file, out)
+            saved.append((await insert(db, "files", {
+                "business_id": business_id, "category": category, "kind": kind, "supplier_id": supplier_id,
+                "filename": name, "path": rel, "content_type": upload.content_type, "source": "upload",
+                "sorted_by": "owner" if category else None, "uploaded_at": now_iso()}), name))
+    return saved
+
+
+@router.post("/approvals/{approval_id}/answer")
+async def answer_question(approval_id: int, text: Optional[str] = Form(None),
+                          files: list[UploadFile] = File(default=[])):
+    """The owner answers an agent's question, with text and/or a file (e.g. a clearer copy).
+    The answer goes back to the agent that asked, as a task."""
+    async with connect() as db:
+        a = await fetch_one(db, "SELECT * FROM approvals WHERE id = ?", (approval_id,))
+    if not a or a["kind"] != "question":
+        raise HTTPException(404, "Question not found")
+    if a["status"] != "pending":
+        raise HTTPException(409, f"Already {a['status']}")
+    if not text and not files:
+        raise HTTPException(422, "Give text or a file")
+    supplier_id = None
+    if a["ingredient_id"]:
+        async with connect() as db:
+            ing = await fetch_one(db, "SELECT supplier_id FROM ingredients WHERE id = ?", (a["ingredient_id"],))
+        supplier_id = ing and ing["supplier_id"]
+    saved = await _save_uploads(a["business_id"], files, "suppliers" if a["ingredient_id"] else None,
+                                "certificate" if a["ingredient_id"] else None, supplier_id)
+    async with connect() as db:
+        await update(db, "approvals", approval_id, {
+            "status": "replied", "reply_text": text, "reply_file_id": saved[0][0] if saved else None,
+            "decided_at": now_iso(), "replied_at": now_iso()})
+        ingredient = a["ingredient_id"] and await fetch_one(db, "SELECT id, name FROM ingredients WHERE id = ?",
+                                                             (a["ingredient_id"],))
+        await db.commit()
+        await state.post_event(db, a["business_id"], "owner", f"Answered: {a['title']}"[:120], "ok",
+                               approval_id=approval_id)
+        task = await state.create_task(
+            db, a["business_id"], "owner", a["requested_by"], f"Owner answered: {a['title']}"[:200],
+            detail=text, payload={"approval_id": approval_id, "file_ids": [f for f, _ in saved],
+                                  "replaces_file_id": a["file_id"],
+                                  "ingredient_id": ingredient["id"] if ingredient else None,
+                                  "ingredient_name": ingredient["name"] if ingredient else None},
+            event_label=f"Owner sent {'a file' if saved else 'an answer'}"[:120],
+            message=(text or "") + (" (file attached)" if saved else ""))
+    return {"approval_id": approval_id, "task_id": task["id"], "file_ids": [f for f, _ in saved]}
+
+
+@router.post("/approvals/{approval_id}/simulate-reply")
+async def simulate_reply(approval_id: int, text: Optional[str] = Form(None),
+                         files: list[UploadFile] = File(default=[])):
+    """Stage fallback and tests: record a supplier reply as if it came in on Telegram."""
+    from .routes_webhooks import record_reply
+    async with connect() as db:
+        a = await fetch_one(db, "SELECT * FROM approvals WHERE id = ?", (approval_id,))
+        if not a or a["kind"] != "message" or a["status"] not in ("sent", "replied"):
+            raise HTTPException(409, "Only a sent supplier message can get a reply")
+        supplier = await fetch_one(db, "SELECT * FROM suppliers WHERE id = ?", (a["supplier_id"],))
+        attachments = [(await f.read(), f.filename or "reply", f.content_type) for f in files]
+        return await record_reply(db, supplier, a, text or "", attachments, "Telegram")
 
 
 # ── Records tab ──────────────────────────────────────────────────────

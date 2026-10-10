@@ -5,6 +5,7 @@ Every route here sits under /agent and requires the X-Connector-Token header
 when CONNECTOR_TOKEN is set. See CONTRACT.md §5 for the matching tools.
 """
 
+import json
 import os
 from typing import Any, Literal, Optional
 
@@ -12,12 +13,13 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from . import pack, state
+from .database import AGENTS as AGENT_NAMES
 from .database import (
     REQUIRED_DOCUMENTS, UPLOAD_DIR, connect, fetch_all, fetch_one, insert, now_iso, update,
 )
 
 Agent = Literal["coordinator", "certificate_checker", "supplier_chaser",
-                "document_writer", "onsite_inspector", "renewal_watch"]
+                "document_writer", "onsite_inspector", "renewal_watch", "auditor"]
 EventStatus = Literal["ok", "problem", "attention", "action", "info"]
 Category = Literal["company", "products", "suppliers", "site"]
 FileKind = Literal["invoice", "certificate", "recipe", "photo", "registration", "label", "other"]
@@ -76,6 +78,7 @@ class PostEvent(BaseModel):
     business_id: int = DEFAULT_BUSINESS
     agent: Agent
     label: str = Field(min_length=1, max_length=120)
+    message: Optional[str] = Field(default=None, max_length=400)
     status: EventStatus
     handed_to: Optional[Agent] = None
     run_id: Optional[int] = None
@@ -86,16 +89,17 @@ async def post_event(req: PostEvent):
     async with connect() as db:
         await _business(db, req.business_id)
         return await state.post_event(db, req.business_id, req.agent, req.label.strip(), req.status,
-                                      handed_to=req.handed_to, run_id=req.run_id)
+                                      handed_to=req.handed_to, run_id=req.run_id, message=req.message)
 
 
 # ── task board ───────────────────────────────────────────────────────
 
 class CreateTask(BaseModel):
     business_id: int = DEFAULT_BUSINESS
-    from_agent: Agent
+    from_agent: Agent | Literal["system", "owner"]
     assignee: Agent
     title: str = Field(min_length=1, max_length=200)
+    message: Optional[str] = Field(default=None, max_length=400)   # what the sender says to the assignee
     detail: Optional[str] = None
     payload: Optional[dict[str, Any]] = None
 
@@ -107,7 +111,7 @@ async def create_task(req: CreateTask):
     async with connect() as db:
         await _business(db, req.business_id)
         return await state.create_task(db, req.business_id, req.from_agent, req.assignee,
-                                       req.title, req.detail, req.payload)
+                                       req.title, req.detail, req.payload, message=req.message)
 
 
 @router.get("/tasks")
@@ -131,6 +135,7 @@ async def get_my_tasks(agent: Agent, business_id: int = DEFAULT_BUSINESS):
 class CompleteTask(BaseModel):
     agent: Agent
     result: Optional[str] = None
+    reply: Optional[str] = Field(default=None, max_length=400)  # said back to the agent that gave the task
 
 
 @router.post("/tasks/{task_id}/complete")
@@ -145,8 +150,9 @@ async def complete_task(task_id: int, req: CompleteTask):
             return state.task_out(task)
         values = {"status": "done", "result": req.result, "completed_at": now_iso()}
         await update(db, "tasks", task_id, values)
+        answer_to = task["from_agent"] if task["from_agent"] in AGENT_NAMES and req.reply else None
         await state.post_event(db, task["business_id"], req.agent, f"Done: {task['title']}"[:120], "ok",
-                               task_id=task_id)
+                               task_id=task_id, handed_to=answer_to, message=req.reply)
         return state.task_out({**task, **values})
 
 
@@ -300,10 +306,11 @@ class SaveCertificate(BaseModel):
     business_id: int = DEFAULT_BUSINESS
     ingredient_id: Optional[int] = None
     ingredient_name: Optional[str] = None
-    issuer: str
+    issuer: Optional[str] = None
     cert_number: Optional[str] = None
     expiry_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     issuer_recognised: Optional[bool] = None
+    legible: bool = True                 # False: the scan can't be read; status becomes 'unclear'
     file_id: Optional[int] = None
 
 
@@ -311,14 +318,16 @@ class SaveCertificate(BaseModel):
 async def save_certificate(req: SaveCertificate):
     async with connect() as db:
         ing = await _ingredient(db, req.business_id, req.ingredient_id, req.ingredient_name)
+        if req.legible and not req.issuer:
+            raise HTTPException(422, "A readable certificate needs an issuer")
         recognised = req.issuer_recognised
-        if recognised is None:
+        if recognised is None and req.issuer:
             recognised = state.issuer_recognised(req.issuer)
         cert_id = await insert(db, "certificates", {
-            "ingredient_id": ing["id"], "issuer": req.issuer, "cert_number": req.cert_number,
+            "ingredient_id": ing["id"], "issuer": req.issuer or "(unreadable)", "cert_number": req.cert_number,
             "expiry_date": req.expiry_date,
             "issuer_recognised": None if recognised is None else int(recognised),
-            "file_id": req.file_id, "created_at": now_iso()})
+            "legible": int(req.legible), "file_id": req.file_id, "created_at": now_iso()})
         today = await state.get_today(db)
         row = next(r for r in await state.ingredient_rows(db, req.business_id, today) if r["id"] == ing["id"])
     return {"certificate_id": cert_id, "ingredient_id": ing["id"], "ingredient": ing["name"],
@@ -359,6 +368,15 @@ async def save_document(req: SaveDocument):
         return doc
 
 
+@router.get("/documents/{document_id}")
+async def get_document(document_id: int):
+    async with connect() as db:
+        doc = await fetch_one(db, "SELECT * FROM documents WHERE id = ?", (document_id,))
+    if not doc:
+        raise HTTPException(404, "Document not found")
+    return doc
+
+
 # ── site findings ────────────────────────────────────────────────────
 
 class SaveSiteFinding(BaseModel):
@@ -388,9 +406,11 @@ async def save_site_finding(req: SaveSiteFinding):
 
 class RequestApproval(BaseModel):
     business_id: int = DEFAULT_BUSINESS
-    kind: Literal["message", "document"]
+    kind: Literal["message", "document", "question", "plan"]
     agent: Agent
     title: Optional[str] = None
+    file_id: Optional[int] = None
+    plan: Optional[list[dict[str, Any]]] = None   # plan: [{assignee, title, message?, detail?}]
     supplier_id: Optional[int] = None
     supplier_name: Optional[str] = None
     ingredient_id: Optional[int] = None
@@ -421,6 +441,28 @@ async def request_approval(req: RequestApproval):
             values.update(document_id=doc["id"], title=req.title or f"Review {doc['title']} (v{doc['version']})")
             await update(db, "documents", doc["id"], {"status": "pending_approval", "updated_at": now_iso()})
             dup_sql, dup_params = "document_id = ?", (doc["id"],)
+        elif req.kind == "plan":
+            # The Coordinator's plan. Nothing starts until the owner approves it; then each step becomes a task.
+            steps = []
+            for s in req.plan or []:
+                if s.get("assignee") not in AGENT_NAMES or s.get("assignee") == req.agent or not s.get("title"):
+                    raise HTTPException(422, f"Bad plan step: {s}")
+                steps.append({k: s.get(k) for k in ("assignee", "title", "message", "detail")})
+            if not steps:
+                raise HTTPException(422, "A plan needs at least one step")
+            values.update(title=req.title or "Approve the plan", body_en=req.body_en, payload=json.dumps(steps))
+            dup_sql, dup_params = "1 = ?", (1,)
+        elif req.kind == "question":
+            # Something only the owner can give (a clearer copy, a record). She answers with text or a file.
+            if not (req.title and (req.body_en or req.body_ms)):
+                raise HTTPException(422, "A question needs a title and body_en")
+            ingredient = None
+            if req.ingredient_id is not None or req.ingredient_name:
+                ingredient = await _ingredient(db, req.business_id, req.ingredient_id, req.ingredient_name)
+            values.update(title=req.title, body_en=req.body_en, body_ms=req.body_ms, file_id=req.file_id,
+                          ingredient_id=ingredient["id"] if ingredient else None)
+            dup_sql = "ifnull(ingredient_id, 0) = ? AND ifnull(file_id, 0) = ?"
+            dup_params = (ingredient["id"] if ingredient else 0, req.file_id or 0)
         else:
             supplier = await _supplier(db, req.business_id, req.supplier_id, req.supplier_name)
             if not supplier:
@@ -447,8 +489,10 @@ async def request_approval(req: RequestApproval):
         values.update(run_id=run["id"] if run else None, status="pending", created_at=now_iso())
         values["id"] = await insert(db, "approvals", values)
         await db.commit()
-        await state.post_event(db, req.business_id, req.agent, f"Needs your OK: {values['title']}"[:120],
-                               "action", approval_id=values["id"])
+        prefix = {"question": "Question for you", "plan": "Plan ready"}.get(req.kind, "Needs your OK")
+        await state.post_event(db, req.business_id, req.agent, f"{prefix}: {values['title']}"[:120],
+                               "action", approval_id=values["id"],
+                               message=req.body_en if req.kind == "question" else None)
         return values
 
 

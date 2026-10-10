@@ -17,12 +17,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import messaging
-from .database import connect, fetch_all, init_db
+from .database import ROOT, connect, fetch_all, init_db
 from .routes_agent import router as agent_router
 from .routes_dashboard import router as dashboard_router, send_fallback
+from .routes_demo import router as demo_router
 from .routes_webhooks import router as webhook_router
 from .seed import seed
 
@@ -83,3 +85,12 @@ async def tunnel_guard(request: Request, call_next):
 app.include_router(agent_router)
 app.include_router(dashboard_router)
 app.include_router(webhook_router)
+app.include_router(demo_router)
+
+# The owner's dashboard: http://localhost:<port>/app/
+app.mount("/app", StaticFiles(directory=ROOT / "dashboard", html=True), name="dashboard")
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse("/app/")

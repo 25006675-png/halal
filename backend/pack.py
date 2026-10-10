@@ -28,6 +28,7 @@ DISCLAIMER = (
 
 STATUS_REASONS = {
     "missing": "no certificate on file",
+    "unclear": "certificate scan could not be read; a clearer copy is needed",
     "expired": "certificate expired",
     "unrecognised_issuer": "issuer not on JAKIM's recognised list",
 }

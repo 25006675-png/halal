@@ -1,5 +1,5 @@
 """
-HalalReady MCP connector: one server, shared by all six WorkBuddy agents.
+HalalReady MCP connector: one server, shared by all seven agents.
 
 Every tool forwards to the backend (BACKEND_URL, default http://localhost:8000).
 Agents never calculate dates or scores; those come back from the backend.
@@ -30,7 +30,7 @@ TOKEN = os.getenv("CONNECTOR_TOKEN") or ""
 BUSINESS_ID = int(os.getenv("BUSINESS_ID", "1"))
 
 Agent = Literal["coordinator", "certificate_checker", "supplier_chaser",
-                "document_writer", "onsite_inspector", "renewal_watch"]
+                "document_writer", "onsite_inspector", "renewal_watch", "auditor"]
 EventStatus = Literal["ok", "problem", "attention", "action", "info"]
 Category = Literal["company", "products", "suppliers", "site"]
 FileKind = Literal["invoice", "certificate", "recipe", "photo", "registration", "label", "other"]
@@ -169,16 +169,18 @@ def save_ingredients(ingredients: list[dict[str, Any]]) -> dict:
 
 
 @mcp.tool()
-def save_certificate(issuer: str, ingredient_id: Optional[int] = None, ingredient_name: Optional[str] = None,
-                     cert_number: Optional[str] = None, expiry_date: Optional[str] = None,
-                     issuer_recognised: Optional[bool] = None, file_id: Optional[int] = None) -> dict:
+def save_certificate(issuer: Optional[str] = None, ingredient_id: Optional[int] = None,
+                     ingredient_name: Optional[str] = None, cert_number: Optional[str] = None,
+                     expiry_date: Optional[str] = None, issuer_recognised: Optional[bool] = None,
+                     file_id: Optional[int] = None, legible: bool = True) -> dict:
     """Record a certificate (or source document) for an ingredient. expiry_date: YYYY-MM-DD.
     Leave issuer_recognised empty to have the backend check the recognised-bodies list.
+    legible=False when the scan can't be read (status 'unclear'); never guess its details.
     Returns the calculated status."""
     return _call("POST", "/agent/certificates", {
         "business_id": BUSINESS_ID, "ingredient_id": ingredient_id, "ingredient_name": ingredient_name,
         "issuer": issuer, "cert_number": cert_number, "expiry_date": expiry_date,
-        "issuer_recognised": issuer_recognised, "file_id": file_id})
+        "issuer_recognised": issuer_recognised, "file_id": file_id, "legible": legible})
 
 
 @mcp.tool()
@@ -203,19 +205,21 @@ def save_site_finding(zone: Zone, severity: Literal["ok", "attention", "problem"
 
 
 @mcp.tool()
-def request_approval(kind: Literal["message", "document"], agent: Agent, title: Optional[str] = None,
+def request_approval(kind: Literal["message", "document", "question"], agent: Agent, title: Optional[str] = None,
                      supplier_id: Optional[int] = None, supplier_name: Optional[str] = None,
                      ingredient_id: Optional[int] = None, ingredient_name: Optional[str] = None,
                      body_ms: Optional[str] = None, body_en: Optional[str] = None,
-                     document_id: Optional[int] = None, doc_type: Optional[str] = None) -> dict:
+                     document_id: Optional[int] = None, doc_type: Optional[str] = None,
+                     file_id: Optional[int] = None) -> dict:
     """Ask the owner to approve something. Nothing is sent until she does.
     kind=message: a supplier message; give the supplier, the ingredient it is about, and body_ms and/or body_en.
-    kind=document: a saved document; give document_id or doc_type."""
+    kind=document: a saved document; give document_id or doc_type.
+    kind=question: something only the owner can give; title + body_en, optional ingredient and file_id."""
     return _call("POST", "/agent/approvals", {
         "business_id": BUSINESS_ID, "kind": kind, "agent": agent, "title": title,
         "supplier_id": supplier_id, "supplier_name": supplier_name, "ingredient_id": ingredient_id,
         "ingredient_name": ingredient_name, "body_ms": body_ms, "body_en": body_en,
-        "document_id": document_id, "doc_type": doc_type})
+        "document_id": document_id, "doc_type": doc_type, "file_id": file_id})
 
 
 @mcp.tool()

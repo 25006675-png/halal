@@ -1,0 +1,33 @@
+/* HalalReady live: the few pieces the template's live demo doesn't have.
+   Injected after the template's own styles by scripts/build_dashboard.py. */
+.demo-menu { position: relative; }
+.demo-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 270px; padding: 6px; display: grid;
+  border-radius: 10px; background: #FFFFFF; border: 1px solid var(--bd2, #D4D4DB); box-shadow: 0 18px 40px -18px rgba(13, 14, 26, .35); }
+.demo-list[hidden] { display: none; }
+.demo-list button { display: grid; gap: 1px; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 7px; cursor: pointer; }
+.demo-list button:hover { background: var(--wash, #FAFAFB); }
+.demo-list b { font-size: 13.5px; font-weight: 560; }
+.demo-list span { font-size: 12px; color: var(--muted); }
+
+.ap + .ap { margin-top: 10px; }
+.plan-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.plan-steps li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px;
+  border-radius: 8px; background: var(--wash, #FAFAFB); border: 1px solid var(--bd, #E4E4E9); }
+.plan-steps b { display: block; font-size: 13px; line-height: 1.25; }
+.plan-steps span { font-size: 12.5px; color: var(--muted); }
+.ap-q { display: flex; gap: 10px; align-items: flex-start; }
+.ap-thumb { width: 64px; height: 64px; flex: none; object-fit: cover; border-radius: 6px; border: 1px solid var(--bd, #E4E4E9); cursor: zoom-in; background: var(--surface-2); }
+.ap-drop { padding: 10px 12px; min-height: 0; font-size: 13px; }
+.ap-drop .fn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap .draft { min-height: 0; }
+
+.evd-img { display: block; max-width: 100%; max-height: 60vh; border-radius: 6px; border: 1px solid var(--line); background: #FFFFFF; }
+.evd-none { margin: 0; padding: 30px 10px; color: var(--muted); font-size: 13px; }
+.vw-fig .evd-img { max-height: 340px; }
+.wa-in { justify-self: start; background: #FFFFFF; border: 1px solid var(--bd, #E4E4E9); border-radius: 12px 12px 12px 3px; display: grid; gap: 6px; }
+.wa-img { max-width: 220px; border-radius: 8px; border: 1px solid var(--bd, #E4E4E9); }
+.in-sample { justify-self: center; margin-top: -4px; }
+.fb-dl { margin: 4px 0 0; justify-self: start; }
+.pg mark { background: var(--attn-wash, rgba(245, 158, 11, .14)); color: var(--attn, #B45309); padding: 0 3px; border-radius: 3px; }
+.tile-list .fn { color: inherit; text-decoration: none; }
+.tile-list .fn:hover { text-decoration: underline; }
