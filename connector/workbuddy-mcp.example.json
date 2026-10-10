@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "halalready": {
+      "command": "C:/path/to/DORMATHON/.venv/Scripts/python.exe",
+      "args": ["C:/path/to/DORMATHON/connector/server.py"],
+      "env": {
+        "BACKEND_URL": "http://localhost:8000",
+        "CONNECTOR_TOKEN": ""
+      }
+    },
+    "halalready-http": {
+      "url": "http://127.0.0.1:8001/mcp"
+    }
+  }
+}

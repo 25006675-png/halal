@@ -1,161 +1,106 @@
 """
-HalalReady — Two-Agent Handoff Test
-Proposal §10: "First milestone: two agents (Certificate Checker → Supplier Chaser)
-hand off a task through the connector, visible on the events page."
+HalalReady: two-agent handoff test through the real MCP connector.
 
-This script simulates:
-  1. Certificate Checker finds an expired cert
-  2. Creates a finding
-  3. Creates a task assigned to Supplier Chaser
-  4. Posts an event with handed_to = supplier_chaser
-  5. Supplier Chaser picks up the task
-  6. Drafts a message
-  7. Completes the task
+First milestone (proposal §9): the Certificate Checker hands a task to the
+Supplier Chaser through the connector, visible on the events stream.
 
-Run the backend first: python backend/app.py
-Then run this:    python scripts/test_handoff.py
+This starts connector/server.py over stdio exactly as WorkBuddy would, and
+plays both agents through its tools. The owner's approval goes through the
+dashboard endpoint.
+
+    python -m uvicorn backend.app:app --port 8000     # in one terminal
+    python scripts/test_handoff.py                     # in another
+    python scripts/test_handoff.py --backend http://localhost:8011
 """
 
-import httpx, json, time
+import argparse
+import asyncio
+import json
+import os
+import sys
+from pathlib import Path
 
-BACKEND = "http://localhost:8000"
-BUSINESS_ID = 1
+import httpx
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
-def api(method, path, body=None):
-    url = f"{BACKEND}{path}"
-    if method == "GET":
-        r = httpx.get(url, timeout=10)
-    elif method == "POST":
-        r = httpx.post(url, json=body, timeout=10)
-    elif method == "PATCH":
-        r = httpx.patch(url, json=body, timeout=10)
-    else:
-        raise ValueError(method)
-    r.raise_for_status()
-    data = r.json()
-    print(f"  {method} {path} → {json.dumps(data, indent=2)[:200]}")
-    return data
+async def run(backend: str) -> int:
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=[str(ROOT / "connector" / "server.py")],
+        env={**os.environ, "BACKEND_URL": backend},
+    )
+    async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
+        tools = sorted(t.name for t in (await session.list_tools()).tools)
+        print(f"Connector tools ({len(tools)}): {', '.join(tools)}\n")
+
+        async def tool(name: str, **args):
+            result = await session.call_tool(name, args)
+            text = result.content[0].text if result.content else ""
+            if result.isError:
+                raise RuntimeError(f"{name} failed: {text}")
+            data = result.structuredContent
+            if isinstance(data, dict) and set(data) == {"result"}:
+                data = data["result"]
+            if data is None:
+                data = json.loads(text)
+            return data
+
+        start = httpx.get(f"{backend}/business/1/events", params={"limit": 1000}).json()
+        after_id = start[-1]["id"] if start else 0
+
+        print("Certificate Checker")
+        await tool("save_ingredients", ingredients=[{
+            "name": "Belacan (shrimp paste)", "brand": "Belacan Melaka", "kind": "processed",
+            "proof_type": "halal_certificate", "supplier_name": "Belacan Melaka Asli (sample)",
+            "product_names": ["Sambal Belacan"]}])
+        cert = await tool("save_certificate", ingredient_name="Belacan (shrimp paste)", issuer="JAKIM",
+                          cert_number="SAMPLE-JAKIM-5678", expiry_date="2026-08-10", issuer_recognised=True)
+        print(f"  belacan certificate status: {cert['status']} ({cert['days_to_expiry']} days)")
+        await tool("post_event", agent="certificate_checker", label="Belacan certificate expired", status="problem")
+        task = await tool("create_task", from_agent="certificate_checker", assignee="supplier_chaser",
+                          title="Ask Belacan Melaka for a renewed certificate",
+                          payload={"ingredient_id": cert["ingredient_id"], "status": cert["status"]})
+        print(f"  handed task #{task['id']} to supplier_chaser\n")
+
+        print("Supplier Chaser")
+        mine = await tool("get_my_tasks", agent="supplier_chaser")
+        picked = next(t for t in mine if t["id"] == task["id"])
+        print(f"  picked up task #{picked['id']}: {picked['title']} ({picked['status']})")
+        approval = await tool("request_approval", kind="message", agent="supplier_chaser",
+                              supplier_name="Belacan Melaka Asli (sample)",
+                              ingredient_id=cert["ingredient_id"],
+                              body_ms="Salam Encik Roslan, sijil halal belacan telah tamat. Boleh hantar sijil baharu?",
+                              body_en="Hello Mr Roslan, the belacan halal certificate has expired. "
+                                      "Could you send the renewed one?")
+        print(f"  approval #{approval['id']} waiting for the owner")
+
+        sent = httpx.post(f"{backend}/approvals/{approval['id']}/approve").json()
+        print(f"  owner approved -> {sent['status']} via {sent['channel']}")
+        await tool("complete_task", task_id=task["id"], agent="supplier_chaser", result="Message sent to supplier")
+
+    events = httpx.get(f"{backend}/business/1/events", params={"after_id": after_id}).json()
+    print("\nEvents posted during the test:")
+    for e in events:
+        arrow = f" -> {e['handed_to']}" if e["handed_to"] else ""
+        print(f"  #{e['id']:<4} {e['agent']:<20}{arrow:<24} [{e['status']}] {e['label']}")
+
+    handoff = [e for e in events if e["agent"] == "certificate_checker" and e["handed_to"] == "supplier_chaser"]
+    done = [e for e in events if e["agent"] == "supplier_chaser" and e["task_id"] == task["id"] and e["status"] == "ok"]
+    ok = bool(handoff) and bool(done) and cert["status"] == "expired"
+    print("\nPASS: handoff visible in events" if ok else "\nFAIL: handoff not found in events")
+    return 0 if ok else 1
 
 
 def main():
-    print("\n" + "=" * 60)
-    print("🧪 Two-Agent Handoff Test")
-    print("   Certificate Checker → Supplier Chaser")
-    print("=" * 60)
-
-    # Step 1: Start a run
-    print("\n📋 Step 1: Start a run")
-    run = api("POST", f"/business/{BUSINESS_ID}/runs", {})
-    run_id = run["id"]
-
-    # Step 2: Certificate Checker finds expired belacan cert
-    print("\n🔍 Step 2: Certificate Checker finds expired certificate")
-    api("POST", "/events", {
-        "run_id": run_id,
-        "agent": "certificate_checker",
-        "label": "Checking belacan certificate",
-        "status": "action",
-    })
-    time.sleep(0.3)
-
-    # Step 3: Create a finding
-    print("\n⚠️  Step 3: Create finding for expired cert")
-    finding = api("POST", "/findings", {
-        "run_id": run_id,
-        "agent": "certificate_checker",
-        "category": "certificate",
-        "severity": "problem",
-        "title": "Belacan halal cert expired",
-        "detail": "JAKIM/HC-2024/5678 expired 10 Aug 2026",
-        "ingredient_id": 5,
-    })
-    finding_id = finding["id"]
-
-    api("POST", "/events", {
-        "run_id": run_id,
-        "agent": "certificate_checker",
-        "label": "Belacan certificate expired Aug 2026",
-        "status": "problem",
-        "finding_id": finding_id,
-    })
-    time.sleep(0.3)
-
-    # Step 4: Create a task and hand off
-    print("\n📤 Step 4: Create task & hand off to supplier_chaser")
-    task = api("POST", "/tasks", {
-        "finding_id": finding_id,
-        "type": "supplier_message",
-        "supplier_id": 4,
-        "channel": "whatsapp",
-        "body_ms": "Sijil halal belacan telah tamat. Sila hantar sijil baharu.",
-        "body_en": "Belacan halal cert expired. Please send renewed cert.",
-        "assignee": "supplier_chaser",
-    })
-    task_id = task["id"]
-
-    api("POST", "/events", {
-        "run_id": run_id,
-        "agent": "certificate_checker",
-        "label": "Handed expired cert to supplier chaser",
-        "status": "action",
-        "finding_id": finding_id,
-        "handed_to": "supplier_chaser",
-    })
-    time.sleep(0.5)
-
-    # Step 5: Supplier Chaser picks up the task
-    print("\n📥 Step 5: Supplier Chaser picks up task")
-    tasks = api("GET", "/tasks/agent/supplier_chaser")
-    print(f"     Found {len(tasks)} task(s) assigned")
-
-    api("POST", "/events", {
-        "run_id": run_id,
-        "agent": "supplier_chaser",
-        "label": "Picked up expired belacan cert task",
-        "status": "action",
-    })
-    time.sleep(0.3)
-
-    # Step 6: Supplier Chaser drafts message, requests approval
-    print("\n✉️  Step 6: Draft message ready, requesting approval")
-    api("POST", "/events", {
-        "run_id": run_id,
-        "agent": "supplier_chaser",
-        "label": "Draft WhatsApp message ready for owner",
-        "status": "action",
-    })
-    api("POST", "/approvals/request", {
-        "item_type": "task",
-        "item_id": task_id,
-    })
-    time.sleep(0.3)
-
-    # Step 7: Owner approves (simulated)
-    print("\n✅ Step 7: Owner approves the message")
-    api("PATCH", f"/tasks/{task_id}", {"status": "approved"})
-    time.sleep(0.3)
-
-    # Step 8: Supplier Chaser marks task done
-    print("\n🏁 Step 8: Supplier Chaser completes the task")
-    api("POST", f"/tasks/{task_id}/complete")
-
-    api("POST", "/events", {
-        "run_id": run_id,
-        "agent": "supplier_chaser",
-        "label": "Belacan supplier message sent",
-        "status": "ok",
-    })
-
-    # Summary
-    print("\n" + "=" * 60)
-    print("✅ Handoff test complete!")
-    print(f"   Run ID:     {run_id}")
-    print(f"   Finding ID: {finding_id}")
-    print(f"   Task ID:    {task_id}")
-    print(f"\n   View run:   {BACKEND}/runs/{run_id}")
-    print(f"   Stream:     {BACKEND}/runs/{run_id}/stream")
-    print("=" * 60 + "\n")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--backend", default=os.getenv("BACKEND_URL", "http://localhost:8000"))
+    args = parser.parse_args()
+    sys.exit(asyncio.run(run(args.backend.rstrip("/"))))
 
 
 if __name__ == "__main__":
