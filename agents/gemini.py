@@ -12,6 +12,7 @@ quota.
 import asyncio
 import itertools
 import logging
+import re
 from collections import deque
 import os
 import time
@@ -25,11 +26,17 @@ MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 RPM_PER_KEY = int(os.getenv("GEMINI_RPM_PER_KEY", "12"))
 
 
+KEY_NAME = re.compile(r"^(gemini_api_keys?|gemini_key)\d*$", re.I)
+
+
 def _keys() -> list[str]:
-    raw = os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY") or os.getenv("gemini_key") or ""
-    keys = [k.strip().strip("'\"") for k in raw.split(",") if k.strip()]
+    """Every key in the environment: GEMINI_API_KEYS=a,b,c and/or gemini_key, gemini_key2, gemini_key3, ..."""
+    names = sorted((n for n in os.environ if KEY_NAME.match(n)),
+                   key=lambda n: (re.sub(r"\d+$", "", n.lower()), int(re.search(r"(\d*)$", n).group(1) or 0)))
+    raw = ",".join(os.environ[n] for n in names)
+    keys = list(dict.fromkeys(k.strip().strip("'\"") for k in raw.split(",") if k.strip()))  # no duplicates
     if not keys:
-        raise RuntimeError("No Gemini key. Set GEMINI_API_KEYS=key1,key2,key3 in .env")
+        raise RuntimeError("No Gemini key. Set gemini_key=... (and gemini_key2, gemini_key3, ...) in .env")
     return keys
 
 
@@ -38,6 +45,7 @@ class KeyPool:
         self.clients = [genai.Client(api_key=k) for k in _keys()]
         self.resting_until = [0.0] * len(self.clients)
         self.recent = [deque() for _ in self.clients]   # request times in the last minute, per key
+        self.sent = 0                                     # requests sent to Gemini, to measure a run
         self._order = itertools.cycle(range(len(self.clients)))
 
     @property
@@ -47,7 +55,7 @@ class KeyPool:
     def _next(self) -> tuple[int | None, float]:
         """A key with room now, or None and how long until one has room."""
         now = time.monotonic()
-        soonest = 60.0
+        soonest = float("inf")
         for _ in range(len(self.clients)):
             i = next(self._order)
             window = self.recent[i]
@@ -75,6 +83,7 @@ class KeyPool:
                 await asyncio.sleep(max(0.2, wait) + 0.05)
                 continue
             attempt += 1
+            self.sent += 1
             try:
                 return await asyncio.wait_for(
                     self.clients[i].aio.models.generate_content(model=model, contents=contents, config=config),

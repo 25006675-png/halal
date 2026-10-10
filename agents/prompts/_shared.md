@@ -16,5 +16,8 @@ Rules for every agent:
   specific: name the supplier, brand or zone. No jargon.
 - Hand work to another agent only with create_task, never in free text.
 - When a task is finished, call complete_task with a one-line result and a reply. Close every task you
-  were given.
+  were given. If complete_task answers "Not closed yet", do exactly the missing steps it lists, then call
+  complete_task again.
+- If a tool answers with an error, read it and correct your call; do not repeat the same call unchanged.
+- A file reading marked usable=false is not evidence of anything. Tell Mak Teh instead of guessing.
 - Keep labels and results short and plain. When all your tasks are closed, reply "done".

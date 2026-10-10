@@ -7,6 +7,7 @@ handed_to), approvals. Plus businesses, products, runs, packs and settings,
 which the rest of the app needs.
 """
 
+import hashlib
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -75,7 +76,7 @@ async def connect():
         await db.close()
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 async def init_db():
@@ -118,7 +119,14 @@ async def fetch_one(db, sql: str, params=()) -> dict | None:
     return dict(rows[0]) if rows else None
 
 
+def fingerprint(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 async def insert(db, table: str, values: dict) -> int:
+    if table == "files" and "sha256" not in values and values.get("path"):
+        # Every stored file is fingerprinted once; reads are refused if the bytes ever change.
+        values = {**values, "sha256": fingerprint(UPLOAD_DIR / values["path"])}
     cols = ", ".join(values)
     marks = ", ".join("?" for _ in values)
     cur = await db.execute(f"INSERT INTO {table} ({cols}) VALUES ({marks})", tuple(values.values()))
@@ -216,6 +224,7 @@ CREATE TABLE IF NOT EXISTS files (
     content_type TEXT,
     source       TEXT NOT NULL DEFAULT 'upload' {_check('source', ['upload', 'supplier_reply', 'sample'])},
     sorted_by    TEXT,
+    sha256       TEXT,                   -- fingerprint at upload; files are never changed afterwards
     uploaded_at  TEXT NOT NULL
 );
 

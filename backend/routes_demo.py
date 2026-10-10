@@ -7,8 +7,14 @@ its fallbacks behave like the real thing. Localhost only (see the tunnel guard).
 """
 
 import io
+import json
 import mimetypes
+import os
 import shutil
+import signal
+import subprocess
+import sys
+import time
 import uuid
 
 from fastapi import APIRouter, HTTPException, UploadFile
@@ -46,11 +52,13 @@ async def demo_reset():
 
 
 @router.post("/load-sample")
-async def load_sample():
-    """Drop the sample pile, unsorted, as if the owner dragged it in."""
+async def load_sample(reset: bool = False):
+    """Drop the sample pile, unsorted, as if the owner dragged it in. reset=true starts from an empty case."""
     files = sorted(p for p in PILE.glob("*") if p.is_file())
     if not files:
         raise HTTPException(404, "No sample files; run scripts/make_sample_case.py")
+    if reset:
+        await demo_reset()
     (UPLOAD_DIR / "files").mkdir(parents=True, exist_ok=True)
     async with connect() as db:
         for f in files:
@@ -62,6 +70,60 @@ async def load_sample():
         await db.commit()
         await state.post_event(db, BUSINESS_ID, "owner", f"Added {len(files)} files", "info", handed_to="coordinator")
     return {"files": len(files)}
+
+
+# ── the agents (agents/runner.py) ───────────────────────────────────
+
+HEARTBEAT = ROOT / ".cache" / "runner.json"
+RUNNER_LOG = ROOT / ".cache" / "runner.log"
+_runner: subprocess.Popen | None = None
+
+
+def runner_status() -> dict:
+    """Running = the runner wrote its heartbeat in the last 10 seconds (also when started from a terminal)."""
+    try:
+        beat = json.loads(HEARTBEAT.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        beat = {}
+    running = bool(beat) and time.time() - beat.get("at", 0) < 10
+    starting = _runner is not None and _runner.poll() is None and not running
+    return {"running": running, "starting": starting, "model": beat.get("model"), "keys": beat.get("keys"),
+            "error": beat.get("error") if running else None, "pid": beat.get("pid") if running else None}
+
+
+@router.get("/agents")
+async def agents_status():
+    return runner_status()
+
+
+@router.post("/agents/start")
+async def agents_start():
+    global _runner
+    st = runner_status()
+    if st["running"] or st["starting"]:
+        return st
+    RUNNER_LOG.parent.mkdir(parents=True, exist_ok=True)
+    log = open(RUNNER_LOG, "a", encoding="utf-8")
+    flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    _runner = subprocess.Popen([sys.executable, "-m", "agents.runner"], cwd=ROOT, stdout=log,
+                               stderr=subprocess.STDOUT, creationflags=flags)
+    return {**runner_status(), "starting": True}
+
+
+@router.post("/agents/stop")
+async def agents_stop():
+    global _runner
+    st = runner_status()
+    if _runner is not None and _runner.poll() is None:
+        _runner.terminate()
+    elif st["pid"]:
+        try:
+            os.kill(st["pid"], signal.SIGTERM)
+        except OSError:
+            pass
+    _runner = None
+    HEARTBEAT.unlink(missing_ok=True)
+    return {"running": False, "starting": False}
 
 
 async def _latest(kind: str, match) -> dict | None:

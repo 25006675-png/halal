@@ -101,7 +101,7 @@ class LiveDashboard extends Dashboard {
       document.body.dataset.liveError = String(err && err.stack || err).slice(0, 600);   /* readable in a page dump */
       this.toast(err instanceof TypeError && /fetch/i.test(err.message) ? 'Backend not reachable.' : 'Dashboard error: ' + err.message);
     }
-    if (/[?&]still/.test(location.search)) return;   /* ?still: no live stream (screenshots) */
+    if (/[?&]still(&|=|$)/.test(location.search)) return;   /* ?still: no live stream (screenshots) */
     this.connect();
     setInterval(() => { if (!document.hidden) this.refreshSoon(); }, 6000);
   }
@@ -120,6 +120,7 @@ class LiveDashboard extends Dashboard {
   refreshSoon() { clearTimeout(this.rt); this.rt = setTimeout(() => this.refresh().catch(() => {}), 350); }
   async refresh() {
     const B = '/business/' + LIVE_BIZ;
+    liveApi('/demo/agents').then(r => { this.runner = r; this.syncRunner(); }).catch(() => {});
     const [overview, agents, feed, ingredients, site, documents, approvals, tasks, files, pack, suppliers] = await Promise.all([
       liveApi(B + '/overview'), liveApi(B + '/agents'), liveApi(B + '/feed'), liveApi(B + '/ingredients'), liveApi(B + '/site'),
       liveApi(B + '/documents'), liveApi(B + '/approvals'), liveApi(B + '/tasks'), liveApi(B + '/files'), liveApi(B + '/pack'), liveApi(B + '/suppliers')]);
@@ -334,6 +335,9 @@ class LiveDashboard extends Dashboard {
     const needs = s ? s.feed.needs_you.length : 0;
     this.pkHeadState.textContent = s && s.overview.latest_pack ? 'Ready for your review' : this.filesReady ? this.filesReady + ' of 6 files ready' : 'Not built yet';
     this.pkHeadState.dataset.state = s && s.overview.latest_pack ? 'complete' : this.filesReady ? 'running' : 'ready';
+    const pendingWork = s && s.tasks.some(t => t.status !== 'done');
+    if (this.runner && !this.runner.running && pendingWork) return this.setStateChip('waiting', this.runner.starting ? 'Agents starting' : 'Agents offline');
+    if (this.runner && this.runner.error && /quota/i.test(this.runner.error)) return this.setStateChip('waiting', 'Out of Gemini quota');
     if (busy) return this.setStateChip('running', busy + ' agent' + (busy > 1 ? 's' : '') + ' working');
     if (needs) return this.setStateChip('waiting', needs + ' need' + (needs > 1 ? '' : 's') + ' you');
     this.setStateChip('complete', 'Live · all quiet');
@@ -347,7 +351,11 @@ class LiveDashboard extends Dashboard {
     if (!s || !s.files.length) { this.toast('Add your files first, or load the sample case.'); return; }
     this.startBtn.disabled = true;
     livePost('/business/' + LIVE_BIZ + '/runs', { mode: 'prepare', instruction: q })
-      .then(() => { this.started = true; this.caseText.textContent = q; this.setTab('agents'); this.toast('The Coordinator has your instruction.'); this.refreshSoon(); })
+      .then(() => {
+        this.started = true; this.caseText.textContent = q; this.setTab('agents');
+        if (!(this.runner && this.runner.running)) this.startAgents(); else this.toast('The Coordinator has your instruction.');
+        this.refreshSoon();
+      })
       .catch(err => { this.startBtn.disabled = false; this.toast(err.message); });
   }
   focusApprovals() {
@@ -519,7 +527,12 @@ class LiveDashboard extends Dashboard {
     d2.addEventListener('dragover', e => { e.preventDefault(); d2.classList.add('over'); });
     d2.addEventListener('dragleave', () => d2.classList.remove('over'));
     d2.addEventListener('drop', e => { e.preventDefault(); d2.classList.remove('over'); upload(e.dataTransfer.files); });
-    this.sampleBtn = h('button', { class: 'btn btn-line btn-sm in-sample', type: 'button', onclick: () => livePost('/demo/load-sample').then(r => { this.toast(r.files + ' sample files loaded.'); this.refreshSoon(); }).catch(err => this.toast(err.message)) }, icon('plus'), 'Load the sample case');
+    /* One button: an empty case, then every sample document in the pile. */
+    this.sampleBtn = h('button', { class: 'btn btn-ink in-sample', type: 'button', onclick: () => {
+      this.sampleBtn.disabled = true;
+      livePost('/demo/load-sample?reset=true').then(() => { location.hash = '#demo'; location.reload(); })
+        .catch(err => { this.sampleBtn.disabled = false; this.toast(err.message); });
+    } }, icon('upload'), h('span', null, 'Load all sample documents'));
     d2.after(this.sampleBtn);
     $('.in-note', p)?.remove();
     $('.own-list', p)?.remove();
@@ -569,7 +582,7 @@ class LiveDashboard extends Dashboard {
     if (this.inFilesHead) this.inFilesHead.textContent = total ? total + ' files loaded' : 'No files yet';
     if (this.inFilesChip) this.inFilesChip.innerHTML = icon('done') + (total ? total + ' files attached' : 'No files yet');
     this.inFilesChip?.classList.toggle('ok', total > 0);
-    this.sampleBtn.hidden = total > 0;
+    this.sampleBtn.querySelector('span:last-child').textContent = total ? 'Start over with the sample documents' : 'Load all sample documents';
     this.startBtn.disabled = !!this.started;
     this.startBtn.querySelector('span').textContent = this.started ? 'Run started' : 'Start the run';
   }
@@ -842,9 +855,40 @@ class LiveDashboard extends Dashboard {
     v.append(...body.filter(Boolean));
   }
 
+  /* ---------- the agents themselves: running, offline, out of quota ---------- */
+  startAgents() {
+    this.agentBtn.disabled = true;
+    livePost('/demo/agents/start').then(() => {
+      this.toast('Starting the seven agents…');
+      this.runner = Object.assign({}, this.runner, { starting: true }); this.syncRunner();
+      [2500, 5000, 9000].forEach(ms => setTimeout(() => this.refreshSoon(), ms));
+    }).catch(err => { this.agentBtn.disabled = false; this.toast(err.message); });
+  }
+  stopAgents() {
+    livePost('/demo/agents/stop').then(() => { this.toast('Agents stopped.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
+  }
+  syncRunner() {
+    const r = this.runner || {};
+    const quota = r.error && /quota/i.test(r.error);
+    this.agentBox.dataset.state = r.running ? (quota ? 'error' : 'on') : r.starting ? 'starting' : 'off';
+    this.agentText.textContent = r.running ? (quota ? 'Out of Gemini quota' : 'Agents running') : r.starting ? 'Agents starting…' : 'Agents offline';
+    this.agentSub.textContent = r.running ? (quota ? 'Add a key from another project, or wait for the daily reset' : (r.model || 'Gemini') + ' · ' + (r.keys || 1) + ' key' + ((r.keys || 1) > 1 ? 's' : '')) : r.starting ? 'Loading the agents' : 'Start them to process the run';
+    this.agentBtn.hidden = !!(r.running || r.starting);
+    this.agentBtn.disabled = false;
+    this.agentStop.hidden = !r.running;
+    this.refreshState();
+  }
+
   /* ---------- demo controls (stage helpers) ---------- */
   build() {
     super.build();
+    this.agentText = h('b', null, 'Agents offline');
+    this.agentSub = h('span', null, 'Start them to process the run');
+    this.agentBtn = h('button', { class: 'btn btn-ink btn-sm', type: 'button', onclick: () => this.startAgents() }, icon('play'), 'Start the agents');
+    this.agentStop = h('button', { class: 'agent-stop', type: 'button', hidden: true, onclick: () => this.stopAgents() }, 'Stop');
+    this.agentBox = h('div', { class: 'agent-box', 'data-state': 'off' }, h('span', { class: 'agent-dot', 'aria-hidden': 'true' }),
+      h('div', { class: 'agent-t' }, this.agentText, this.agentSub), this.agentBtn, this.agentStop);
+    this.ranFor.after(this.agentBox);
     const menu = h('div', { class: 'demo-menu' });
     const list = h('div', { class: 'demo-list', role: 'menu', hidden: true });
     const btn = h('button', { class: 'btn btn-line btn-sm', type: 'button', 'aria-haspopup': 'true', onclick: e => { e.stopPropagation(); list.hidden = !list.hidden; } }, 'Demo');

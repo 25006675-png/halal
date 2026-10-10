@@ -26,8 +26,26 @@
 .vw-fig .evd-img { max-height: 340px; }
 .wa-in { justify-self: start; background: #FFFFFF; border: 1px solid var(--bd, #E4E4E9); border-radius: 12px 12px 12px 3px; display: grid; gap: 6px; }
 .wa-img { max-width: 220px; border-radius: 8px; border: 1px solid var(--bd, #E4E4E9); }
-.in-sample { justify-self: center; margin-top: -4px; }
+.in-sample { justify-self: center; --h: 44px; padding: 0 20px; gap: 8px; font-size: 14.5px; }
+.in-sample .ico { width: 16px; height: 16px; }
 .fb-dl { margin: 4px 0 0; justify-self: start; }
 .pg mark { background: var(--attn-wash, rgba(245, 158, 11, .14)); color: var(--attn, #B45309); padding: 0 3px; border-radius: 3px; }
 .tile-list .fn { color: inherit; text-decoration: none; }
 .tile-list .fn:hover { text-decoration: underline; }
+
+/* the agents' own status, with a start button, on the Agents step */
+.agent-box { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 4px 10px; align-items: center; padding: 10px 12px;
+  border-radius: 8px; border: 1px solid var(--bd, #E4E4E9); background: #FFFFFF; }
+.agent-box .agent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.agent-box[data-state="on"] .agent-dot { background: var(--ok-fill); animation: ring-pulse 1.2s ease-in-out infinite; }
+.agent-box[data-state="starting"] .agent-dot { background: var(--attn-fill); }
+.agent-box[data-state="error"] { border-color: var(--attn-fill); background: #FFFBEB; }
+.agent-box[data-state="error"] .agent-dot { background: var(--attn-fill); }
+.agent-box[data-state="off"] { border-color: var(--attn-fill); box-shadow: 0 0 0 3px var(--attn-wash, rgba(245, 158, 11, .14)); }
+.agent-t { display: grid; min-width: 0; }
+.agent-t b { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+.agent-t span { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.agent-box .btn { grid-column: 1 / -1; justify-self: stretch; gap: 6px; }
+.agent-box .btn .ico { width: 14px; height: 14px; }
+.agent-stop { grid-column: 1 / -1; justify-self: start; border: 0; background: none; padding: 0; font-size: 12px; color: var(--muted);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

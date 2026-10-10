@@ -240,6 +240,10 @@ def check(stage: int, quiet: bool = False) -> list[tuple[str, bool, str]]:
     ok("board: every task closed", not open_tasks, "; ".join(open_tasks))
     stopped = [e["label"] for e in s["events"] if "stopped early" in e["label"].lower()]
     ok("board: no agent stopped early", not stopped, "; ".join(stopped))
+    failed = [t["title"] for t in s["tasks"] if (t["result"] or "").startswith(("FAILED", "Closed with open problems"))]
+    ok("board: no task failed its work check", not failed, "; ".join(failed))
+    attention = [a["title"] for a in s["approvals"] if a["title"].startswith("Needs attention")]
+    ok("board: nothing needs attention", not attention, "; ".join(attention))
 
     if stage == 1:
         docs = {d["doc_type"]: d["status"] for d in s["documents"]}
@@ -254,6 +258,30 @@ def check(stage: int, quiet: bool = False) -> list[tuple[str, bool, str]]:
             print(f"  {'PASS' if passed else 'FAIL'}  {name}" + (f"   [{info}]" if info and not passed else ""))
         print(f"  status: {s['overview']['status_sentence']}  ({s['overview']['readiness']['score']}%)")
     return results
+
+
+def moments() -> str:
+    """Seconds from the plan approval to each wow moment, from the records' own timestamps."""
+    from datetime import datetime
+    s = _state()
+    ts = lambda iso: datetime.fromisoformat(iso).timestamp()
+    plan = next((a for a in s["approvals"] if a["kind"] == "plan" and a["decided_at"]), None)
+    if not plan:
+        return "no approved plan"
+    t0 = ts(plan["decided_at"])
+    sup = {x["id"]: x["name"] for x in s["suppliers"]}
+    oil = [a for a in s["approvals"] if a["kind"] == "message" and "murni" in sup.get(a["supplier_id"], "").lower()]
+    copy = [a for a in s["approvals"] if a["kind"] == "question" and "clearer" in a["title"].lower()]
+    store = next(z for z in s["site"] if z["zone"] == "store")["findings"]
+    merpati = [f for f in store if "MERPATI" in f["title"].upper()]
+    checker = [e for e in s["events"] if e["agent"] == "certificate_checker" and "MERPATI" in e["label"].upper()]
+    marks = {"oil message": oil and oil[0]["created_at"], "clearer-copy question": copy and copy[0]["created_at"],
+             "Inspector flags Merpati": merpati and merpati[0]["created_at"],
+             "Checker confirms Merpati": checker and checker[0]["created_at"]}
+    parts = [f"{k} +{ts(v) - t0:.0f}s" if v else f"{k} never" for k, v in marks.items()]
+    done = [ts(v) - t0 for v in marks.values() if v]
+    last = max(done) if len(done) == len(marks) else None
+    return "; ".join(parts) + (f"  ->  all wow moments by +{last:.0f}s" if last is not None else "")
 
 
 # ── full scenario with the agents ────────────────────────────────────
@@ -285,7 +313,7 @@ def _agents_until_quiet():
     vision._locks.clear()
     t = time.time()
     asyncio.run(runner.run(once=True))
-    return time.time() - t
+    return f"{time.time() - t:.0f}s, {gemini._pool.sent if gemini._pool else 0} Gemini requests"
 
 
 def verify(runs: int, no_cache: bool):
@@ -304,16 +332,17 @@ def verify(runs: int, no_cache: bool):
             print(f"\n=== Run {n}/{runs} ===")
             reset()
             drop()
-            print(f"agents: sorting and plan {_agents_until_quiet():.0f}s")
+            print(f"agents: sorting and plan {_agents_until_quiet()}")
             plan()
-            print(f"agents: first pass {_agents_until_quiet():.0f}s")
+            print(f"agents: first pass {_agents_until_quiet()}")
+            print(f"moments after the plan approval: {moments()}")
             results = check(1)
             approve()
             reply()
-            print(f"agents: after the oil reply {_agents_until_quiet():.0f}s")
+            print(f"agents: after the oil reply {_agents_until_quiet()}")
             results += [(f"[after reply] {r[0]}", r[1], r[2]) for r in check(2) if r[0].startswith(("1 ", "board"))]
             answer()
-            print(f"agents: after the clear copy {_agents_until_quiet():.0f}s")
+            print(f"agents: after the clear copy {_agents_until_quiet()}")
             results += [(f"[after copy] {r[0]}", r[1], r[2]) for r in check(3) if r[0].startswith(("2 ", "board"))]
             for name, passed, _ in results:
                 table.setdefault(name, []).append(passed)

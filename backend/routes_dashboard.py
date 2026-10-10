@@ -18,7 +18,7 @@ from sse_starlette.sse import EventSourceResponse
 from . import calculations as calc
 from . import messaging, pack, state
 from .database import (
-    AGENTS, MYT, UPLOAD_DIR, ZONES, connect, fetch_all, fetch_one, insert, now_iso, reset_db, update,
+    AGENTS, MYT, UPLOAD_DIR, ZONES, connect, fetch_all, fetch_one, fingerprint, insert, now_iso, reset_db, update,
 )
 from .seed import seed
 
@@ -721,6 +721,8 @@ async def file_content(file_id: int):
         f = await fetch_one(db, "SELECT * FROM files WHERE id = ?", (file_id,))
     if not f or not pack.file_path(f).exists():
         raise HTTPException(404, "File not found")
+    if f.get("sha256") and fingerprint(pack.file_path(f)) != f["sha256"]:
+        raise HTTPException(409, f"{f['filename']} changed after it was uploaded; it can't be trusted")
     return FileResponse(pack.file_path(f), media_type=f["content_type"], filename=f["filename"],
                         content_disposition_type="inline")
 
