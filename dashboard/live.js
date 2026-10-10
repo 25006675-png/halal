@@ -13,19 +13,82 @@ const AG = { coordinator: 'coord', certificate_checker: 'checker', supplier_chas
   onsite_inspector: 'inspector', auditor: 'auditor', renewal_watch: 'renewal', owner: 'owner' };
 const AG_BACK = Object.fromEntries(Object.entries(AG).map(([k, v]) => [v, k]));
 const LIVE_STATUS = {
-  owner: 'Owner, sample case', coord: 'Waiting for your instruction', checker: 'Checks every certificate',
-  chaser: 'Waiting for work', writer: '3 documents to draft', inspector: '5 zone photos',
-  auditor: 'Reviews every document', pack: 'Built at the end', renewal: 'Wakes on expiry dates'
+  owner: 'Owner', coord: 'Waiting for your files', checker: 'Checks every certificate',
+  chaser: 'Contacts your suppliers', writer: 'Drafts your documents', inspector: 'Checks each zone photo',
+  auditor: '', pack: '', renewal: 'Watches expiry dates'
 };
 const LIVE_TOOLS = {
-  coord: ['read_document', 'sort_file', 'propose_plan', 'set_status', 'assemble_pack'],
-  checker: ['read_document', 'record_certificate', 'check_brand', 'ask_owner'],
-  chaser: ['request_supplier_message'],
-  writer: ['save_document', 'get_document'],
-  inspector: ['read_document', 'compare_store_brands', 'save_site_finding'],
-  auditor: ['check_requirements', 'request_document_approval'],
-  renewal: ['get_case', 'create_task']
+  coord: ['list_files', 'read_document', 'sort_file', 'propose_plan', 'assemble_pack'],
+  checker: ['read_document', 'save_ingredients', 'check_certificate', 'ask_owner'],
+  chaser: ['draft_message', 'send_after_approval'],
+  writer: ['save_document', 'check_requirements'],
+  inspector: ['read_photo', 'check_zone', 'ask_owner'],
+  renewal: ['schedule_reminder']
 };
+/* one line per agent, for the plan */
+const AGENT_ROLE = {
+  certificate_checker: 'Reads every supplier certificate and runs 5 checks on each',
+  onsite_inspector: 'Checks each zone photo against the premises requirements',
+  document_writer: 'Drafts your halal policy and procedures from your own files',
+  supplier_chaser: 'Writes to a supplier when a certificate is missing or expired',
+  renewal_watch: 'Watches every expiry date after the pack is built'
+};
+const CHANNEL = {
+  whatsapp: { label: 'WhatsApp', send: 'Send on WhatsApp', done: 'Sent on WhatsApp' },
+  telegram: { label: 'Telegram', send: 'Send on Telegram', done: 'Sent on Telegram' },
+  email: { label: 'Email', send: 'Send email', done: 'Email sent' }
+};
+/* the three channels, drawn as small round badges */
+const CH_SVG = {
+  whatsapp: '<path d="M5.3 18.7l1-3.1a7.4 7.4 0 1 1 2.8 2.5z"/><path d="M9.7 8.9c.3 2.3 2.2 4.2 4.6 4.6l.9-1-1.5-.9-.6.5a3.4 3.4 0 0 1-1.9-1.9l.5-.6-.9-1.5z" fill="currentColor" stroke="none"/>',
+  telegram: '<path d="M20.5 4.6 3.6 11.1l5.5 2 2.1 5.9 3.1-4 4.1 3.1z"/><path d="m9.1 13.1 7.3-5.5"/>',
+  email: '<rect x="3.6" y="6" width="16.8" height="12" rx="2"/><path d="m4.2 7.4 7.8 5.4 7.8-5.4"/>'
+};
+const chIcon = key => h('span', { class: 'ch-ico ch-' + key, 'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (CH_SVG[key] || '') + '</svg>' });
+/* the graph without the Auditor and the pack node: the pack is the output step, not an agent */
+const LIVE_ANCHOR = {
+  owner: [.08, .14], coord: [.5, .5], chaser: [.5, .13], checker: [.2, .3], writer: [.8, .3],
+  inspector: [.22, .78], renewal: [.78, .78], auditor: [-9, -9], pack: [-9, -9]
+};
+const HIDDEN_NODES = ['auditor', 'pack'];
+const parseJSON = s => { try { return typeof s === 'string' ? JSON.parse(s) : s || null; } catch (_) { return null; } };
+const isSheet = name => /\.xlsx?$/i.test(name || '');
+const isPdf = name => /\.pdf$/i.test(name || '');
+
+/* an image with boxes drawn on it (positions are shares of the width and height) */
+function marked(src, boxes, alt) {
+  const wrap = h('div', { class: 'hl-wrap' }, h('img', { class: 'evd-img', src, alt: alt || '' }));
+  (boxes || []).forEach(b => { if (b && b.box) wrap.append(h('span', { class: 'hl-box ' + (b.tone || 'bad'), 'data-k': b.key || '', style: { left: b.box[0] * 100 + '%', top: b.box[1] * 100 + '%', width: (b.box[2] - b.box[0]) * 100 + '%', height: (b.box[3] - b.box[1]) * 100 + '%' } })); });
+  return wrap;
+}
+/* the checklist an agent ran: a tick or a cross, what was checked, what it found */
+function checkList(checks, img) {
+  return h('ul', { class: 'cklist' }, ...(checks || []).map(c => {
+    const li = h('li', { class: c.ok ? 'ok' : 'bad' }, h('span', { class: 'ck-i', html: icon(c.ok ? 'check' : 'x') }),
+      h('div', null, h('b', null, c.label), c.detail ? h('span', null, c.detail) : null));
+    if (img && c.key && c.box) {
+      li.addEventListener('mouseenter', () => $$('.hl-box', img).forEach(b => b.classList.toggle('on', b.dataset.k === c.key)));
+      li.addEventListener('mouseleave', () => $$('.hl-box', img).forEach(b => b.classList.remove('on')));
+    }
+    return li;
+  }));
+}
+/* any file the owner gave: photo, PDF or spreadsheet */
+function fileView(f) {
+  if (isPdf(f.filename)) return h('iframe', { class: 'evd-pdf', src: fileUrl(f.id) + '#toolbar=0&navpanes=0', title: f.filename });
+  if (!isSheet(f.filename)) return h('img', { class: 'evd-img', src: fileUrl(f.id), alt: f.filename });
+  const box = h('div', { class: 'xs-wrap' }, h('p', { class: 'evd-none' }, 'Opening…'));
+  liveApi('/files/' + f.id + '/sheet').then(r => {
+    const L = 'ABCDEFGHIJ', n = Math.max(...r.rows.map(x => x.length));
+    box.innerHTML = '';
+    box.append(h('div', { class: 'xs-scroll' }, h('table', { class: 'xs xs-auto' },
+      h('thead', null, h('tr', null, h('th', { class: 'xs-c' }), ...Array.from({ length: n }, (_, k) => h('th', { class: 'xs-c' }, L[k])))),
+      h('tbody', null, ...r.rows.map((row, i) => h('tr', { class: i ? '' : 'xs-hd' }, h('td', { class: 'xs-n' }, String(i + 1)), ...Array.from({ length: n }, (_, k) => h('td', null, row[k] || ''))))))),
+    h('div', { class: 'xs-tabs' }, ...r.sheets.map((x, k) => h('span', { class: k ? '' : 'on' }, x))));
+  }).catch(() => { box.innerHTML = '<p class="evd-none">This file could not be opened.</p>'; });
+  return box;
+}
+const fileIcon = name => isSheet(name) ? 'sheet' : /\.(jpe?g|png|heic|webp)$/i.test(name || '') ? 'eye' : 'doc';
 const ZONE_LABEL = { store: 'Raw material store', processing: 'Processing area', packing: 'Packing area', cleaning: 'Cleaning area', waste: 'Waste area' };
 const ST_TEXT = { valid: 'Valid', expiring: 'Expiring soon', expired: 'Expired', missing: 'No certificate', unclear: 'Can’t read the scan', unrecognised_issuer: 'Issuer not recognised' };
 const ST_RESULT = { valid: 'ok', expiring: 'warn', unclear: 'warn', expired: 'bad', missing: 'bad', unrecognised_issuer: 'bad' };
@@ -124,7 +187,9 @@ class LiveDashboard extends Dashboard {
     const [overview, agents, feed, ingredients, site, documents, approvals, tasks, files, pack, suppliers] = await Promise.all([
       liveApi(B + '/overview'), liveApi(B + '/agents'), liveApi(B + '/feed'), liveApi(B + '/ingredients'), liveApi(B + '/site'),
       liveApi(B + '/documents'), liveApi(B + '/approvals'), liveApi(B + '/tasks'), liveApi(B + '/files'), liveApi(B + '/pack'), liveApi(B + '/suppliers')]);
+    const hadPack = this.snap ? !!this.snap.overview.latest_pack : null;
     this.snap = { overview, agents, feed, ingredients, site, documents, approvals, tasks, files, pack, suppliers };
+    if (hadPack === false && overview.latest_pack) this.toast('Application pack ready', ['Open it', () => { this.pkFile = 'chk'; this.setTab('pack'); }]);
     const first = tasks.filter(t => t.from_agent === 'owner' && t.assignee === 'coordinator').pop();
     this.runTask = first || null;
     this.started = !!first;
@@ -167,9 +232,11 @@ class LiveDashboard extends Dashboard {
     if (e.agent === 'owner') this.setNode('owner', null, e.label, instant);
   }
   toolFor(label) {
-    const rules = [[/^Reading /, 'read_document'], [/certificate (valid|expired|expiring)|scan unreadable|issuer not recognised/i, 'record_certificate'],
-      [/^Drafted /, 'save_document'], [/^Sorted /, 'sort_file'], [/passed review|^Returned|sent with gaps/i, 'check_requirements'],
-      [/^(Store|Processing|Packing|Cleaning|Waste):/, 'save_site_finding'], [/not declared/i, 'check_brand'], [/^Planning/, 'plan']];
+    const rules = [[/^Reading .*Photo/i, 'read_photo'], [/^Reading /, 'read_document'], [/^Opening \d+ files/, 'list_files'],
+      [/certificate (valid|expired|expiring)|scan unreadable|issuer not recognised/i, 'check_certificate'], [/^Saved \d+ ingredients/, 'save_ingredients'],
+      [/^Drafted /, 'save_document'], [/^Sorted /, 'sort_file'], [/^Checked against|passed review|^Returned|sent with gaps/i, 'check_requirements'],
+      [/^(Store|Processing|Packing|Cleaning|Waste):/, 'check_zone'], [/not declared/i, 'check_brand'], [/^Planning/, 'plan'],
+      [/^Application pack ready|^Updated your application pack/, 'assemble_pack'], [/^Reminder set|^Watching \d+/, 'schedule_reminder']];
     const r = rules.find(([re]) => re.test(label));
     return r ? r[1] : null;
   }
@@ -178,8 +245,8 @@ class LiveDashboard extends Dashboard {
     const L = (e.label + ' ' + (e.message || '')).toLowerCase();
     if (/merpati|undeclared|not declared/.test(L)) { const i = this.snap.ingredients.find(x => x.source === 'found_on_site'); return i ? 'ing:' + i.id : 'zone:store'; }
     const zone = (e.label.match(/^(Store|Processing|Packing|Cleaning|Waste):/) || [])[1];
-    if (zone && e.status !== 'ok') return 'zone:' + zone.toLowerCase();
-    if (e.status === 'problem' || e.status === 'attention') {
+    if (zone) return 'zone:' + zone.toLowerCase();
+    if (/: certificate /.test(e.label) || e.status === 'problem' || e.status === 'attention') {
       const i = this.snap.ingredients.find(x => L.startsWith(x.name.toLowerCase()) || L.includes(x.name.toLowerCase() + ':'));
       if (i) return 'ing:' + i.id;
     }
@@ -229,7 +296,7 @@ class LiveDashboard extends Dashboard {
     this.apSlot.innerHTML = '';
     this.gBanner.hidden = true;
     this.closeEvidence();
-    this.pkFile = 'f1';
+    this.pkFile = 'chk';
     this.layout();
     this.renderDetail();
     this.paintPlay();
@@ -240,9 +307,9 @@ class LiveDashboard extends Dashboard {
     s.tasks.forEach(t => { if (t.status === 'done') doneBy[t.assignee] = (doneBy[t.assignee] || 0) + 1; });
     for (const a of s.agents.agents) {
       const id = AG[a.agent]; if (!id) continue;
-      let st = a.state === 'working' ? 'working' : a.state === 'waiting' ? 'working' : doneBy[a.agent] ? (this.badCount(id) ? 'flag' : 'done') : 'idle';
+      let st = a.in_progress_tasks || a.open_tasks ? 'working' : doneBy[a.agent] ? (this.badCount(id) ? 'flag' : 'done') : 'idle';
       if (id === 'chaser' && s.approvals.some(x => x.kind === 'message' && x.status === 'pending')) st = 'waiting';
-      if (id === 'coord' && s.approvals.some(x => x.kind === 'plan' && x.status === 'pending')) st = 'waiting';
+      if (id === 'coord' && s.approvals.some(x => (x.kind === 'plan' || (x.kind === 'question' && (parseJSON(x.payload) || {}).options)) && x.status === 'pending')) st = 'waiting';
       if (st !== this.state[id]) { this.segChange(id, this.state[id], st); this.setNodeState(id, st); }
       if (a.state !== 'working' && st !== 'idle') this.status[id] = this.idleLine(id) || this.status[id];
     }
@@ -269,16 +336,13 @@ class LiveDashboard extends Dashboard {
   syncSats() {
     const s = this.snap; if (!s) return;
     const dots = [];
-    s.ingredients.forEach(i => dots.push({ agent: 'checker', id: 'i' + i.id, result: ST_RESULT[i.status] || 'ink', label: i.name + ': ' + (ST_TEXT[i.status] || i.status), meta: { kind: 'ing', ing: i, label: i.source === 'found_on_site' ? (i.brand || i.name) : i.name, tag: i.status === 'missing' ? 'NONE' : i.status === 'expired' ? 'EXP' : 'ISS' } }));
-    s.site.zones.filter(z => z.status !== 'unchecked').forEach(z => dots.push({ agent: 'inspector', id: 'z' + z.zone, result: z.status === 'issue' ? 'bad' : 'ok', label: ZONE_LABEL[z.zone] + ': ' + (z.findings.filter(f => f.severity !== 'ok').map(f => f.title).join('; ') || 'nothing to flag'), meta: { kind: 'zone', zone: z, label: ZONE_LABEL[z.zone].replace(' area', '').toLowerCase(), tag: 'FIX' } }));
-    const returned = new Set((this.history || []).filter(e => e.agent === 'auditor' && /Returned/i.test(e.label)).map(e => (e.label.match(/(halal_policy|ingredient_control|traceability)/) || [])[1]));
+    s.ingredients.filter(i => i.cert_id || i.source === 'found_on_site').forEach(i => dots.push({ agent: 'checker', id: 'i' + i.id, result: ST_RESULT[i.status] || 'ink', label: i.name + ': ' + (ST_TEXT[i.status] || i.status), meta: { kind: 'ing', ing: i, label: i.source === 'found_on_site' ? (i.brand || i.name) : i.name, tag: i.status === 'missing' ? 'NONE' : i.status === 'expired' ? 'EXP' : 'ISS' } }));
+    s.site.zones.filter(z => z.status !== 'unchecked').forEach(z => dots.push({ agent: 'inspector', id: 'z' + z.zone, result: z.status === 'issue' ? 'bad' : 'ok', label: ZONE_LABEL[z.zone] + ': ' + (z.findings.filter(f => f.status === 'open' && f.severity !== 'ok').map(f => f.title).join('; ') || 'all checks passed'), meta: { kind: 'zone', zone: z, label: ZONE_LABEL[z.zone].replace(' area', '').toLowerCase(), tag: 'FIX' } }));
     s.documents.forEach(d => {
-      const st = d.status === 'approved' || d.status === 'pending_approval' ? 'ok' : d.status === 'rejected' ? 'warn' : 'ink';
+      const st = d.status === 'approved' ? 'ok' : d.status === 'rejected' ? 'warn' : 'ink';
       dots.push({ agent: 'writer', id: 'd' + d.doc_type, result: st, label: d.title + ': v' + d.version, meta: { kind: 'doc', doc: d, label: d.title.replace(/ (Procedure|for .*)$/i, '') } });
-      if (d.status !== 'draft' || returned.has(d.doc_type)) dots.push({ agent: 'auditor', id: 'a' + d.doc_type, result: d.status === 'draft' ? 'warn' : 'ok', label: d.title + (d.status === 'draft' ? ': returned to the Writer' : ': passed review'), meta: { kind: 'review', doc: d, label: 'review: ' + d.title.replace(/ (Procedure|for .*)$/i, '').toLowerCase() } });
     });
     s.approvals.filter(a => a.kind === 'message').forEach(a => dots.push({ agent: 'chaser', id: 'm' + a.id, result: a.status === 'replied' ? 'ok' : a.status === 'sent' ? 'ok' : a.status === 'failed' ? 'bad' : 'ink', label: a.title + ': ' + a.status, meta: { kind: 'msg', ap: a, label: 'to ' + (this.supplierName(a.supplier_id) || 'supplier').replace(/ Sdn Bhd| Enterprise/, '') } }));
-    LIVE_FILES.forEach(f => { if (this.fileReady(f.id)) dots.push({ agent: 'pack', id: f.id, result: 'ok', label: f.name + ': ready', meta: { kind: 'file', file: f, label: f.name.split('_')[0] + ' ' + f.name.split('_')[1].replace(/\.\w+$|\/$/g, '').toLowerCase() } }); });
     for (const d of dots) {
       const key = d.agent + ':' + d.id;
       const old = this.sats.find(x => x.key === key);
@@ -304,7 +368,7 @@ class LiveDashboard extends Dashboard {
     if (!s) { set(this.k.ready.v, 0); set(this.k.issues.v, 0); set(this.k.files.v, 0); this.k.approvals.v.textContent = '0'; return; }
     const r = s.overview.readiness;
     set(this.k.ready.v, r.done); this.k.ready.v.dataset.of = '/' + r.total;
-    const problems = s.overview.problems.length + s.site.zones.filter(z => z.status === 'issue').length;
+    const problems = s.ingredients.filter(i => (i.cert_id || i.source === 'found_on_site') && ST_RESULT[i.status] !== 'ok').length + s.site.zones.filter(z => z.status === 'issue').length;
     set(this.k.issues.v, problems); this.k.issues.el.classList.toggle('is-bad', problems > 0);
     this.filesReady = LIVE_FILES.filter(f => this.fileReady(f.id)).length;
     set(this.k.files.v, this.filesReady); this.k.files.v.dataset.of = '/6';
@@ -321,7 +385,7 @@ class LiveDashboard extends Dashboard {
     this.runBar.style.width = (total ? Math.round(doneN / total * 100) : 0) + '%';
     if (this.runTask) {
       const t0 = new Date(this.runTask.created_at), secs = Math.max(0, Math.round((Date.now() - t0) / 1000));
-      const busy = s.agents.agents.some(a => a.state === 'working');
+      const busy = s.agents.agents.some(a => a.in_progress_tasks || a.open_tasks);
       this.ranFor.innerHTML = icon('clock') + (busy ? 'Running for ' : 'Started ') + (busy ? Math.floor(secs / 60) + 'm ' + String(secs % 60).padStart(2, '0') + 's' : liveTime(this.runTask.created_at)) + ', live run';
     } else this.ranFor.innerHTML = icon('clock') + 'Not started';
     this.refreshState();
@@ -331,16 +395,17 @@ class LiveDashboard extends Dashboard {
     if (this.replaying) return this.setStateChip('running', 'Replaying ' + this.speed + '×');
     if (!this.started) return this.setStateChip('ready', 'Not started');
     const s = this.snap;
-    const busy = s && s.agents.agents.filter(a => a.state === 'working').length;
+    const busy = s && s.agents.agents.filter(a => a.in_progress_tasks || a.open_tasks).length;
     const needs = s ? s.feed.needs_you.length : 0;
     this.pkHeadState.textContent = s && s.overview.latest_pack ? 'Ready for your review' : this.filesReady ? this.filesReady + ' of 6 files ready' : 'Not built yet';
     this.pkHeadState.dataset.state = s && s.overview.latest_pack ? 'complete' : this.filesReady ? 'running' : 'ready';
     const pendingWork = s && s.tasks.some(t => t.status !== 'done');
     if (this.runner && !this.runner.running && pendingWork) return this.setStateChip('waiting', this.runner.starting ? 'Agents starting' : 'Agents offline');
     if (this.runner && this.runner.error && /quota/i.test(this.runner.error)) return this.setStateChip('waiting', 'Out of Gemini quota');
+    if (s && s.feed.needs_you.some(n => n.kind === 'question' && (parseJSON(n.payload) || {}).options)) return this.setStateChip('waiting', 'Paused · needs you');
     if (busy) return this.setStateChip('running', busy + ' agent' + (busy > 1 ? 's' : '') + ' working');
     if (needs) return this.setStateChip('waiting', needs + ' need' + (needs > 1 ? '' : 's') + ' you');
-    this.setStateChip('complete', 'Live · all quiet');
+    this.setStateChip('complete', s && s.overview.latest_pack ? 'Ready for your review' : 'All quiet');
   }
 
   /* ---------- the run: start, plan, approvals ---------- */
@@ -348,12 +413,12 @@ class LiveDashboard extends Dashboard {
     const q = this.inPrompt.value.trim();
     if (!q) return;
     const s = this.snap;
-    if (!s || !s.files.length) { this.toast('Add your files first, or load the sample case.'); return; }
+    if (!s || !s.files.length) { this.toast('Drop your files in first.'); return; }
     this.startBtn.disabled = true;
     livePost('/business/' + LIVE_BIZ + '/runs', { mode: 'prepare', instruction: q })
       .then(() => {
         this.started = true; this.caseText.textContent = q; this.setTab('agents');
-        if (!(this.runner && this.runner.running)) this.startAgents(); else this.toast('The Coordinator has your instruction.');
+        if (!(this.runner && this.runner.running)) this.startAgents(true);
         this.refreshSoon();
       })
       .catch(err => { this.startBtn.disabled = false; this.toast(err.message); });
@@ -365,30 +430,33 @@ class LiveDashboard extends Dashboard {
   }
   syncApprovals() {
     const s = this.snap; if (!s) return;
-    const order = { plan: 0, message: 1, question: 2, document: 3 };
-    const needs = s.feed.needs_you.filter(n => n.type === 'approval' || n.type === 'failed_message')
+    const order = { plan: 0, question: 1, message: 2 };
+    /* documents are approved on the output checklist, not here */
+    const needs = s.feed.needs_you.filter(n => (n.type === 'approval' && n.kind !== 'document') || n.type === 'failed_message')
       .sort((a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9) || a.id - b.id);
     this.apCards = this.apCards || {};
     const keep = new Set(needs.map(n => n.type + n.id));
     Object.entries(this.apCards).forEach(([k, el]) => { if (!keep.has(k) && !el.classList.contains('is-done')) el.remove(); if (!keep.has(k)) delete this.apCards[k]; });
+    if (this.drafting && needs.some(n => n.kind === 'message')) { this.drafting.remove(); this.drafting = null; }
     needs.forEach(n => {
       const k = n.type + n.id;
-      if (!this.apCards[k]) {
-        const card = this.liveCard(n);
-        this.apCards[k] = card;
-        this.apSlot.append(card);
-        if (this.ready && !reduced()) card.animate([{ opacity: 0, transform: 'translateY(-8px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'none' }], { duration: 480, easing: 'cubic-bezier(.2,.8,.2,1)' });
-      }
+      if (this.apCards[k]) return;
+      const card = this.liveCard(n);
+      this.apCards[k] = card;
+      this.apSlot.append(card);
+      if (this.ready && !reduced()) card.animate([{ opacity: 0, transform: 'translateY(-8px)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'none' }], { duration: 480, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      /* the run stopped on this: show the owner exactly where the problem is */
+      if (this.ready && n.kind === 'question' && n.ingredient_id && (parseJSON(n.payload) || {}).options) setTimeout(() => this.openEvidence('ing:' + n.ingredient_id), 500);
     });
     const top = needs[0];
     this.gBanner.hidden = !top;
     if (top) {
       const t = this.gBanner.querySelector('.gb-txt b');
-      t.textContent = top.kind === 'plan' ? 'The Coordinator’s plan' : top.kind === 'message' ? 'Message to ' + (top.supplier_name || 'a supplier') : top.kind === 'question' ? top.title : top.title;
+      t.textContent = top.kind === 'plan' ? 'The Coordinator’s plan' : top.kind === 'message' ? 'Message to ' + (top.supplier_name || 'a supplier') : top.title;
       this.gWait.textContent = liveTime(top.created_at).slice(0, 5);
-      this.gBanner.querySelector('.gb-ico').innerHTML = icon(top.kind === 'message' ? 'send' : top.kind === 'plan' ? 'hub' : top.kind === 'question' ? 'hand' : 'doc');
+      this.gBanner.querySelector('.gb-ico').innerHTML = icon(top.kind === 'message' ? 'send' : top.kind === 'plan' ? 'hub' : 'hand');
       const go = this.gBanner.querySelector('.gb-go');
-      go.hidden = top.kind === 'question';
+      go.hidden = top.kind !== 'plan';
       go.onclick = () => this.approveItem(top);
       this.gBanner.querySelector('.gb-ghost').onclick = () => { this.select(AG[top.requested_by] || 'coord', true); this.focusApprovals(); };
     }
@@ -396,75 +464,214 @@ class LiveDashboard extends Dashboard {
   liveCard(n) {
     const card = h('section', { class: 'ap', 'aria-label': n.title });
     const who = AGENTS[AG[n.requested_by]] || AGENTS.coord;
+    const extra = parseJSON(n.payload) || {};
     const head = (title, ic) => h('div', { class: 'ap-h' }, h('span', { class: 'ap-ico', 'aria-hidden': 'true', html: icon(ic || 'hand') }),
-      h('div', { class: 'ap-title' }, h('b', null, title), h('span', null, who.name + ', ' + liveTime(n.created_at))));
-    const doneHead = text => { card.classList.add('is-done'); const ah = card.querySelector('.ap-h'); ah.innerHTML = ''; ah.append(h('span', { class: 'ap-ico ok', 'aria-hidden': 'true', html: icon('done') }), h('div', { class: 'ap-title' }, h('b', null, text), h('span', null, 'at ' + new Date().toTimeString().slice(0, 5)))); };
+      h('div', { class: 'ap-title' }, h('b', null, title), h('span', null, who.name + ', ' + liveTime(n.created_at).slice(0, 5))));
+    const doneHead = text => { card.classList.add('is-done'); card.classList.remove('ap-block'); const ah = card.querySelector('.ap-h'); ah.innerHTML = ''; ah.append(h('span', { class: 'ap-ico ok', 'aria-hidden': 'true', html: icon('done') }), h('div', { class: 'ap-title' }, h('b', null, text), h('span', null, 'at ' + new Date().toTimeString().slice(0, 5)))); card.querySelectorAll('.ap-actions, .ap-opts, .ap-drop, .ap-back, textarea').forEach(x => x.remove());
+      /* done cards step aside after a moment, so the next decision stays at the top */
+      setTimeout(() => { if (!card.isConnected) return; const go = () => card.remove(); if (reduced()) go(); else card.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(-6px)' }], { duration: 350, easing: 'ease-in' }).finished.then(go, go); }, 8000); };
     card.markDone = doneHead;
+    const sup = this.snap.suppliers.find(x => x.id === n.supplier_id) || {};
     if (n.type === 'failed_message') {
       card.append(head('Could not send', 'alert'), h('p', { class: 'ap-why' }, n.send_error || 'The message did not go out.'),
         h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink', type: 'button', onclick: () => this.approveItem(n, card) }, 'Try again')));
     } else if (n.kind === 'plan') {
-      let steps = []; try { steps = JSON.parse(n.payload || '[]'); } catch (_) { /* keep empty */ }
+      const steps = parseJSON(n.payload) || [];
+      const role = a => h('li', null, h('span', { class: 'lg-av', html: icon(AGENTS[AG[a]].icon) }), h('div', null, h('b', null, AGENTS[AG[a]].name), h('span', null, AGENT_ROLE[a] || '')));
+      const ask = h('button', { class: 'btn btn-line', type: 'button' }, 'Ask for a change');
+      ask.addEventListener('click', () => {
+        if (card.querySelector('.ap-back')) return;
+        const box = h('textarea', { class: 'draft ap-back', rows: 2, placeholder: 'What should the Coordinator change?' });
+        card.append(box, h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink', type: 'button', onclick: () => {
+          if (!box.value.trim()) { box.focus(); return; }
+          livePost('/approvals/' + n.id + '/reject', { comment: box.value.trim() }).then(() => { doneHead('You asked for a change'); this.refreshSoon(); }).catch(err => this.toast(err.message));
+        } }, 'Send to the Coordinator')));
+        box.focus();
+      });
+      const also = ['supplier_chaser', 'renewal_watch'].filter(a => !steps.some(st => st.assignee === a));
       card.append(head('Approve the plan', 'hub'), h('p', { class: 'ap-why' }, n.body_en || ''),
-        h('ol', { class: 'plan-steps' }, ...steps.map(st => { const a = AGENTS[AG[st.assignee]]; return h('li', null, h('span', { class: 'lg-av', html: icon(a.icon) }), h('div', null, h('b', null, a.name), h('span', null, st.title))); })),
-        h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink mb', type: 'button', onclick: () => this.approveItem(n, card) }, 'Approve the plan')));
+        h('span', { class: 'mono-l sec' }, 'Working in parallel'),
+        h('ol', { class: 'plan-steps' }, ...steps.map(st => role(st.assignee))),
+        also.length ? h('span', { class: 'mono-l sec' }, 'Joins when needed') : null,
+        also.length ? h('ol', { class: 'plan-steps soft' }, ...also.map(role)) : null,
+        h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink mb', type: 'button', onclick: () => this.approveItem(n, card) }, 'Approve the plan'), ask));
     } else if (n.kind === 'message') {
+      const ch = CHANNEL[n.channel] || CHANNEL.whatsapp;
       let lang = 'ms';
       const texts = { ms: n.body_ms || n.body_en || '', en: n.body_en || n.body_ms || '' };
-      const bubbleText = h('span', { lang: 'ms' }, texts.ms);
+      const split = t => { const m = t.match(/^Subject: (.*)\n\n([\s\S]*)$/); return m ? [m[1], m[2]] : [null, t]; };
+      const subj = h('b', { class: 'mail-subj' }), bodyText = h('span', { lang: 'ms' });
+      const paint = () => { const [sb, b] = split(texts[lang]); subj.textContent = sb || ''; bodyText.textContent = b; bodyText.setAttribute('lang', lang); };
+      paint();
       const langBtn = h('button', { class: 'msg-lang', type: 'button' }, 'Show in English');
-      langBtn.addEventListener('click', () => { lang = lang === 'ms' ? 'en' : 'ms'; bubbleText.textContent = texts[lang]; bubbleText.setAttribute('lang', lang); langBtn.textContent = lang === 'ms' ? 'Show in English' : 'Show in Malay'; });
-      const bubble = h('div', { class: 'bubble' }, bubbleText, h('div', { class: 'bubble-meta' }, h('span', null, 'Draft, not sent')));
-      const draft = h('textarea', { class: 'draft', 'aria-label': 'Edit the message', hidden: true });
-      const editBtn = h('button', { class: 'btn btn-line', type: 'button' }, 'Edit draft');
+      langBtn.addEventListener('click', () => { lang = lang === 'ms' ? 'en' : 'ms'; paint(); langBtn.textContent = lang === 'ms' ? 'Show in English' : 'Show in Malay'; });
+      const to = sup.contact_name || sup.name || 'Supplier';
+      const view = n.channel === 'email'
+        ? h('div', { class: 'mail' }, h('div', { class: 'mail-row' }, h('span', null, 'To'), h('b', null, to + ', ' + (sup.name || ''))), h('div', { class: 'mail-row' }, h('span', null, 'Subject'), subj), h('div', { class: 'mail-body' }, bodyText))
+        : h('div', { class: 'bubble' + (n.channel === 'telegram' ? ' tg' : '') }, bodyText, h('div', { class: 'bubble-meta' }, h('span', null, 'Draft, not sent')));
+      const draft = h('textarea', { class: 'draft', 'aria-label': 'Edit the message', hidden: true, rows: 6 });
+      const editBtn = h('button', { class: 'btn btn-line', type: 'button' }, 'Edit');
       editBtn.addEventListener('click', () => {
-        if (draft.hidden) { draft.value = texts[lang]; draft.hidden = false; bubble.hidden = true; editBtn.textContent = 'Save draft'; draft.focus(); }
-        else { texts[lang] = draft.value.trim() || texts[lang]; bubbleText.textContent = texts[lang]; draft.hidden = true; bubble.hidden = false; editBtn.textContent = 'Edit draft'; }
+        if (draft.hidden) { draft.value = texts[lang]; draft.hidden = false; view.hidden = true; editBtn.textContent = 'Save'; draft.focus(); }
+        else { texts[lang] = draft.value.trim() || texts[lang]; paint(); draft.hidden = true; view.hidden = false; editBtn.textContent = 'Edit'; }
       });
-      const sup = this.snap.suppliers.find(x => x.id === n.supplier_id) || {};
+      card.append(h('div', { class: 'ap-h' }, chIcon(n.channel || 'whatsapp'), h('div', { class: 'ap-title' }, h('b', null, 'Ready to send'), h('span', null, who.name + ', ' + liveTime(n.created_at).slice(0, 5)))),
+        h('p', { class: 'ap-why' }, 'Asks ' + (sup.name || 'the supplier') + ' for the renewed cooking oil certificate.'),
+        h('div', { class: 'msg ch-' + (n.channel || 'whatsapp') },
+          h('div', { class: 'msg-to' }, h('span', { class: 'msg-av', 'aria-hidden': 'true' }, initials(to), chIcon(n.channel || 'whatsapp')), h('div', null, h('b', null, to), h('span', null, (sup.name || '') + ', ' + ch.label))),
+          view, draft, langBtn),
+        h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink mb', type: 'button', onclick: () => { if (!draft.hidden) editBtn.click(); this.approveItem(n, card, { body_ms: texts.ms, body_en: texts.en }); } }, chIcon(n.channel || 'whatsapp'), ch.send), editBtn));
+    } else if (n.kind === 'question' && extra.options) {
+      /* a decision the run waits for */
       const ing = this.snap.ingredients.find(i => i.id === n.ingredient_id);
-      card.append(head('Needs your approval'),
-        h('p', { class: 'ap-why' }, ing ? (ing.name + ': ' + (ST_TEXT[ing.status] || ing.status).toLowerCase() + '. This asks ' + (sup.name || 'the supplier') + ' for the certificate.') : n.title),
-        h('div', { class: 'msg' },
-          h('div', { class: 'msg-to' }, h('span', { class: 'msg-av', 'aria-hidden': 'true' }, initials(sup.contact_name || sup.name)), h('div', null, h('b', null, sup.contact_name || sup.name || 'Supplier'), h('span', null, (sup.name || '') + (sup.telegram_chat_id ? ', on Telegram' : ', on WhatsApp')))),
-          bubble, draft, langBtn),
-        h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink mb', type: 'button', onclick: () => { if (!draft.hidden) editBtn.click(); this.approveItem(n, card, { body_ms: texts.ms, body_en: texts.en }); } }, 'Approve and send'), editBtn));
+      const failed = ((ing && ing.cert_checks) || []).filter(c => !c.ok);
+      const thumb = n.file_id ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box, key: c.key })), n.title) : null;
+      if (thumb) { thumb.classList.add('ap-shot'); thumb.addEventListener('click', () => this.openEvidence('ing:' + n.ingredient_id)); }
+      card.classList.add('ap-block');
+      card.append(head('The run is paused', 'alert'),
+        h('div', { class: 'ap-q' }, thumb, h('div', null, h('p', { class: 'ap-why' }, h('b', null, n.title)), failed.map(c => h('p', { class: 'ap-fail', html: icon('x') + '<span>' + esc(c.label) + '</span>' }))[0] || null)),
+        h('p', { class: 'ap-why' }, n.body_en || ''),
+        h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence('ing:' + n.ingredient_id) }, 'See where'),
+        this.channelButtons(o => this.answerChoice(n, o), true));
     } else if (n.kind === 'question') {
-      const fileIn = h('input', { type: 'file', accept: 'image/*,application/pdf,.xlsx,.docx', class: 'sr-only' });
-      const picked = h('span', { class: 'fn' }, 'Attach a file');
-      fileIn.addEventListener('change', () => { picked.textContent = fileIn.files[0] ? fileIn.files[0].name : 'Attach a file'; });
-      const note = h('textarea', { class: 'draft', rows: 2, placeholder: 'Optional note', 'aria-label': 'Your answer' });
-      card.append(head('Needs your answer', 'hand'),
-        h('div', { class: 'ap-q' }, n.file_id ? h('img', { class: 'ap-thumb', src: fileUrl(n.file_id), alt: 'The file in question', onclick: () => this.openFileView(n.file_id, n.title) }) : null, h('p', { class: 'ap-why' }, h('b', null, n.title), h('br'), n.body_en || '')),
-        h('label', { class: 'dropbar ap-drop' }, h('span', { class: 'dropbar-ico', html: icon('upload') }), picked, fileIn), note,
+      const zone = extra.zone && this.snap.site.zones.find(z => z.zone === extra.zone);
+      const finding = zone && zone.findings.find(f => f.status === 'open' && f.severity !== 'ok');
+      const failed = ((finding && finding.checks) || []).filter(c => !c.ok);
+      const fileIn = h('input', { type: 'file', accept: zone ? 'image/*' : 'image/*,application/pdf,.xlsx,.docx', class: 'sr-only' });
+      const picked = h('span', { class: 'fn' }, zone ? 'Upload the new photo' : 'Attach a file');
+      fileIn.addEventListener('change', () => { picked.textContent = fileIn.files[0] ? fileIn.files[0].name : 'Upload the new photo'; });
+      const shot = n.file_id ? (zone ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box }))) : h('img', { class: 'ap-thumb', src: fileUrl(n.file_id), alt: '' })) : null;
+      if (shot) { shot.classList.add(zone ? 'ap-shot' : 'ap-thumb'); shot.addEventListener('click', () => zone ? this.openEvidence('zone:' + zone.zone) : this.openFileView(n.file_id, n.title)); }
+      card.append(head(zone ? 'Fix suggested' : 'Needs your answer', zone ? 'eye' : 'hand'),
+        h('p', { class: 'ap-why' }, h('b', null, n.title)),
+        zone ? shot : h('div', { class: 'ap-q' }, shot, h('p', { class: 'ap-why' }, n.body_en || '')),
+        zone && failed.length ? checkList(failed) : null,
+        zone ? h('p', { class: 'ap-why ap-tip', html: icon('sparkle') + '<span>' + esc(n.body_en || '') + '</span>' }) : null,
+        h('label', { class: 'dropbar ap-drop' }, h('span', { class: 'dropbar-ico', html: icon('upload') }), picked, fileIn),
         h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink mb', type: 'button', onclick: () => {
-          const fd = new FormData(); if (fileIn.files[0]) fd.append('files', fileIn.files[0]); if (note.value.trim()) fd.append('text', note.value.trim());
-          if (!fileIn.files[0] && !note.value.trim()) { this.toast('Attach a file or write an answer.'); return; }
-          liveApi('/approvals/' + n.id + '/answer', { method: 'POST', body: fd }).then(() => { doneHead('You answered'); this.toast('Sent back to the ' + who.name + '.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
+          if (!fileIn.files[0]) { this.toast(zone ? 'Choose the new photo first.' : 'Attach a file first.'); return; }
+          const fd = new FormData(); fd.append('files', fileIn.files[0]); fd.append('text', 'New photo after the fix');
+          liveApi('/approvals/' + n.id + '/answer', { method: 'POST', body: fd }).then(() => { doneHead('Photo sent'); this.toast('Sent to the ' + who.name + '.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
         } }, 'Send to the ' + who.name)));
-    } else {
-      const doc = this.snap.documents.find(d => d.id === n.document_id);
-      card.append(head('Ready for your review', 'doc'), h('p', { class: 'ap-why' }, (doc ? doc.title + ', version ' + doc.version : n.title) + '. Passed the Auditor’s checklist.'),
-        h('div', { class: 'ap-actions' },
-          h('button', { class: 'btn btn-ink', type: 'button', onclick: () => this.approveItem(n, card) }, 'Approve'),
-          h('button', { class: 'btn btn-line', type: 'button', onclick: () => { this.pkFile = doc && doc.doc_type === 'halal_policy' ? 'f3' : 'f4'; this.pkSub = doc && doc.doc_type === 'traceability' ? 1 : 0; this.setTab('pack'); } }, 'Read'),
-          h('button', { class: 'btn btn-line', type: 'button', onclick: () => {
-            if (card.querySelector('.ap-back')) return;   /* an inline box, never a browser dialog */
-            const box = h('textarea', { class: 'draft ap-back', rows: 2, placeholder: 'What should change?' });
-            const send = h('button', { class: 'btn btn-line', type: 'button', onclick: () => livePost('/approvals/' + n.id + '/reject', { comment: box.value }).then(() => { doneHead('Sent back with your comment'); this.refreshSoon(); }).catch(err => this.toast(err.message)) }, 'Send back');
-            card.append(box, h('div', { class: 'ap-actions' }, send));
-          } }, 'Ask for changes')));
     }
     return card;
+  }
+  /* how to reach the supplier: three channels, and "Not now" while the run waits */
+  channelButtons(onPick, withLater) {
+    const box = h('div', { class: 'ap-opts' });
+    const opts = Object.entries(CHANNEL).map(([key, c]) => ({ key, label: c.label })).concat(withLater ? [{ key: 'later', label: 'Not now' }] : []);
+    opts.forEach(o => box.append(h('button', { class: 'btn ' + (o.key === 'later' ? 'btn-line' : 'btn-ink') + ' ap-opt', type: 'button', onclick: () => {
+      box.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      onPick(o).catch(err => { this.toast(err.message); box.querySelectorAll('button').forEach(b => { b.disabled = false; }); });
+    } }, o.key === 'later' ? null : chIcon(o.key), o.label)));
+    return box;
+  }
+  /* the paused run's question, answered from its card or from the agent's details */
+  answerChoice(n, o) {
+    const fd = new FormData(); fd.append('text', o.key === 'later' ? 'Not now' : 'Use ' + o.label);
+    return liveApi('/approvals/' + n.id + '/answer', { method: 'POST', body: fd }).then(() => {
+      const card = this.apCards && this.apCards['approval' + n.id];
+      if (card && card.markDone) card.markDone(o.key === 'later' ? 'You chose to wait' : 'You chose ' + o.label);
+      if (o.key !== 'later') this.showDrafting(o.key, n.ingredient_id);
+      this.refreshSoon();
+    });
+  }
+  /* after the run: ask the supplier now */
+  askSupplier(ing, key) {
+    return livePost('/business/' + LIVE_BIZ + '/ask-supplier', { ingredient_id: ing.id, channel: key }).then(() => {
+      this.setTab('agents');
+      this.showDrafting(key, ing.id);
+      this.refreshSoon();
+    });
+  }
+  /* upload the fix for one open item; it goes to the agent that owns it */
+  uploadBtn(key, label, who) {
+    this.followUps = this.followUps || {};
+    if (this.followUps[key]) return h('span', { class: 'rc-busy' }, h('i'), this.followUps[key]);
+    const input = h('input', { type: 'file', accept: key.startsWith('zone:') ? 'image/*' : 'image/*,application/pdf', class: 'sr-only' });
+    input.addEventListener('change', () => {
+      if (!input.files[0]) return;
+      const fd = new FormData(); fd.append('key', key); fd.append('files', input.files[0]);
+      this.followUps[key] = 'Sent to the ' + who + '…';
+      this.rerender();
+      liveApi('/business/' + LIVE_BIZ + '/follow-up', { method: 'POST', body: fd })
+        .then(() => { this.toast('Sent to the ' + who + '.'); this.refreshSoon(); })
+        .catch(err => { delete this.followUps[key]; this.rerender(); this.toast(err.message); });
+    });
+    return h('label', { class: 'btn btn-ink btn-sm rc-up' }, icon('upload'), label, input);
+  }
+  rerender() { if (this.tab === 'pack') this.renderPack(); this.renderDetail(true); }
+  /* what each flagged item needs next, for the agent's details */
+  ingStep(i) {
+    const s = this.snap;
+    const sup = s.suppliers.find(x => x.id === i.supplier_id) || {};
+    const who = sup.contact_name || i.supplier_name || 'the supplier';
+    const failed = (i.cert_checks || []).filter(c => !c.ok).map(c => c.label);
+    const q = s.feed.needs_you.find(n => n.kind === 'question' && n.ingredient_id === i.id && (parseJSON(n.payload) || {}).options);
+    const m = s.approvals.find(a => a.kind === 'message' && a.ingredient_id === i.id);
+    const upload = this.uploadBtn('cert:' + i.id, i.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', 'Certificate Checker');
+    let text, actions = [];
+    if (q) {
+      text = 'The run is paused. Choose how I should ask ' + who + ' for the renewed certificate.';
+      actions = [this.channelButtons(o => this.answerChoice(q, o), true)];
+    } else if (m && m.status === 'pending') {
+      text = 'The ' + (CHANNEL[m.channel] || CHANNEL.whatsapp).label + ' to ' + who + ' is drafted and waiting for you.';
+      actions = [h('button', { class: 'btn btn-ink btn-sm', type: 'button', onclick: () => this.focusApprovals() }, chIcon(m.channel || 'whatsapp'), 'Review the draft')];
+    } else if (m && (m.status === 'sent' || m.status === 'replied')) {
+      text = 'Asked ' + who + (m.channel === 'email' ? ' by email' : ' on ' + (CHANNEL[m.channel] || CHANNEL.whatsapp).label) + ' at ' + liveTime(m.sent_at).slice(0, 5) + '. When the renewed certificate comes, upload it and I’ll run the 5 checks again.';
+      actions = [upload];
+    } else if (s.tasks.some(t => t.assignee === 'supplier_chaser' && t.status !== 'done')) {
+      text = 'The Supplier Chaser is writing to ' + who + '.';
+    } else {
+      text = 'Ask ' + who + ' at ' + (i.supplier_name || 'the supplier') + ' for the renewed certificate, or upload it if you already have it.';
+      actions = [this.channelButtons(o => this.askSupplier(i, o.key), false), upload];
+    }
+    actions.push(h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence('ing:' + i.id) }, 'See where'));
+    return { title: i.name + ': ' + (failed[0] || ST_TEXT[i.status] || i.status), text, actions };
+  }
+  zoneStep(z) {
+    const f = z.findings.find(x => x.status === 'open' && x.severity !== 'ok') || {};
+    return { title: ZONE_LABEL[z.zone] + ': ' + (f.title || 'fix needed').toLowerCase(), text: f.suggestion || 'Fix it, then upload a new photo of the zone.',
+      actions: [this.uploadBtn('zone:' + z.zone, 'Upload new photo', 'On-site Inspector'), h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, 'See where')] };
+  }
+  nextSteps(id) {
+    const s = this.snap; if (!s) return [];
+    const out = [];
+    if (id === 'checker' || id === 'chaser') s.ingredients.filter(i => i.cert_id && ST_RESULT[i.status] !== 'ok').forEach(i => out.push(this.ingStep(i)));
+    if (id === 'inspector') s.site.zones.filter(z => z.status === 'issue').forEach(z => out.push(this.zoneStep(z)));
+    if (id === 'writer') {
+      const waiting = s.documents.filter(d => d.status === 'pending_approval');
+      if (waiting.length) out.push({ title: waiting.length + ' document' + (waiting.length > 1 ? 's' : '') + ' waiting for your approval', text: waiting.map(d => d.title).join(', ') + '. Read and approve them on the readiness checklist.',
+        actions: [h('button', { class: 'btn btn-ink btn-sm', type: 'button', onclick: () => { this.pkFile = 'chk'; this.setTab('pack'); } }, icon('list'), 'Open the checklist')] });
+    }
+    if (id === 'coord' || id === 'owner') {
+      const n = s.feed.needs_you.length;
+      if (n) out.push({ title: n + (n > 1 ? ' things need' : ' thing needs') + ' you', text: 'Each one is on the right, and on the readiness checklist once the pack is built.',
+        actions: [h('button', { class: 'btn btn-ink btn-sm', type: 'button', onclick: () => this.focusApprovals() }, 'Show me')] });
+    }
+    return out;
+  }
+  stepBox(st) { return h('div', { class: 'nstep' }, h('b', null, st.title), h('p', null, st.text), st.actions.length ? h('div', { class: 'nstep-a' }, ...st.actions) : null); }
+
+  /* while the Supplier Chaser writes the message */
+  showDrafting(channel, ingredientId) {
+    if (this.drafting) this.drafting.remove();
+    const sup = this.snap.suppliers.find(x => x.id === (this.snap.ingredients.find(i => i.id === ingredientId) || {}).supplier_id) || {};
+    const ch = CHANNEL[channel];
+    this.drafting = h('section', { class: 'ap ap-drafting', 'aria-live': 'polite' },
+      h('div', { class: 'ap-h' }, chIcon(channel), h('div', { class: 'ap-title' }, h('b', null, 'Supplier Chaser is writing'), h('span', null, ch.label + ' to ' + (sup.contact_name || sup.name || 'the supplier')))),
+      h('div', { class: 'msg ch-' + channel }, h('div', { class: 'pg-skel' }, ...[92, 84, 96, 58].map(w => h('i', { style: { width: w + '%' } })))));
+    this.apSlot.append(this.drafting);
   }
   approveItem(n, card, edits) {
     card = card || this.apCards[n.type + n.id];
     const btn = card && card.querySelector('.btn-ink');
     if (btn) { btn.disabled = true; if (!reduced()) btn.classList.add('press'); }
     livePost('/approvals/' + n.id + '/approve', edits || {}).then(r => {
-      const msg = n.kind === 'plan' ? 'You approved the plan' : n.kind === 'message' ? (r.status === 'sent' ? 'You approved the message' : 'Could not send') : 'You approved the document';
+      const ch = CHANNEL[r.channel] || null;
+      const msg = n.kind === 'plan' ? 'You approved the plan' : n.kind === 'message' ? (r.status === 'sent' ? (ch ? ch.done : 'Sent') : 'Could not send') : 'You approved the document';
       if (card && card.markDone) card.markDone(msg);
-      this.toast(n.kind === 'plan' ? 'Plan approved. The agents are starting.' : n.kind === 'message' ? (r.channel === 'manual' ? 'Approved. Messaging is in manual mode, so send it yourself.' : r.status === 'sent' ? 'Approved. Sent via ' + r.channel + '.' : 'Could not send: ' + (r.send_error || r.status)) : 'Approved.');
+      this.toast(n.kind === 'plan' ? 'Plan approved. The agents are starting.' : n.kind === 'message' ? (r.status === 'sent' ? msg + ' to ' + (n.supplier_name || 'the supplier') + '.' : 'Could not send: ' + (r.send_error || r.status)) : 'Approved.');
       this.refreshSoon();
     }).catch(err => { if (btn) btn.disabled = false; this.toast(err.message); });
   }
@@ -519,7 +726,7 @@ class LiveDashboard extends Dashboard {
     const upload = files => {
       const fd = new FormData(); Array.from(files || []).forEach(f => fd.append('files', f));
       if (!fd.has('files')) return;
-      liveApi('/business/' + LIVE_BIZ + '/files', { method: 'POST', body: fd }).then(r => { this.toast(r.files.length + ' file(s) added. The Coordinator will sort them.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
+      liveApi('/business/' + LIVE_BIZ + '/files', { method: 'POST', body: fd }).then(r => { this.toast(r.files.length + (r.files.length === 1 ? ' file' : ' files') + ' added.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
     };
     void fileIn;
     const d2 = drop.cloneNode(true); drop.replaceWith(d2);   /* the clone drops the template's 'list only' handlers */
@@ -527,19 +734,14 @@ class LiveDashboard extends Dashboard {
     d2.addEventListener('dragover', e => { e.preventDefault(); d2.classList.add('over'); });
     d2.addEventListener('dragleave', () => d2.classList.remove('over'));
     d2.addEventListener('drop', e => { e.preventDefault(); d2.classList.remove('over'); upload(e.dataTransfer.files); });
-    /* One button: an empty case, then every sample document in the pile. */
-    this.sampleBtn = h('button', { class: 'btn btn-ink in-sample', type: 'button', onclick: () => {
-      this.sampleBtn.disabled = true;
-      livePost('/demo/load-sample?reset=true').then(() => { location.hash = '#demo'; location.reload(); })
-        .catch(err => { this.sampleBtn.disabled = false; this.toast(err.message); });
-    } }, icon('upload'), h('span', null, 'Load all sample documents'));
-    d2.after(this.sampleBtn);
     $('.in-note', p)?.remove();
     $('.own-list', p)?.remove();
     this.inProducts = $$('.cmp-in', p)[1];
     if (this.inProducts) this.inProducts.value = '2 sambal products';
     $$('.sugg-b', p).forEach((b, i) => { const t = ['Prepare Mak Teh Sambal’s halal certification application.', 'Check every supplier certificate before I renew.', 'Check my premises photos for halal risks.'][i]; if (t) { b.textContent = t; b.onclick = () => { this.inPrompt.value = t; this.inPrompt.focus(); }; } });
-    const steps = $$('.hsteps li > span:last-child', p); if (steps[2]) steps[2].textContent = 'Three agents in parallel';
+    [['Plan', 'The Coordinator reads your files'], ['Approve', 'You approve the plan'], ['Work', 'Three agents in parallel'], ['Decide', 'You choose what to do about problems'], ['Output', 'Readiness score and checklist']]
+      .forEach(([b, t], i) => { const li = $$('.hsteps li', p)[i]; if (li) { li.querySelector('b').textContent = b; li.querySelector('span:last-child').textContent = t; } });
+    this.startBtn.querySelector('span').textContent = 'Analyze';
   }
   trayOf(f) {
     if (f.category) return f.category;
@@ -572,8 +774,8 @@ class LiveDashboard extends Dashboard {
       if (open === key) {
         list.innerHTML = '';
         list.append(h('div', { class: 'tile-list-h' }, h('span', { class: 'mono-l' }, title), h('span', { class: 'mono-l ok' }, n + (n === 1 ? ' file' : ' files'))),
-          h('ul', null, ...fs.map(f => h('li', null, h('span', { html: icon(/\.xlsx?$/i.test(f.filename) ? 'sheet' : key === 'site' ? 'eye' : 'doc') }),
-            h('a', { class: 'fn', href: fileUrl(f.id), target: '_blank', rel: 'noopener' }, f.filename)))));
+          h('ul', null, ...fs.map(f => h('li', null, h('button', { class: 'fv-btn', type: 'button', title: 'Open ' + f.filename, 'aria-label': 'Open ' + f.filename, html: icon(fileIcon(f.filename)), onclick: () => this.openFileView(f.id) }),
+            h('button', { class: 'fn fn-btn', type: 'button', onclick: () => this.openFileView(f.id) }, f.filename)))));
         list.hidden = false;
       }
     });
@@ -582,9 +784,8 @@ class LiveDashboard extends Dashboard {
     if (this.inFilesHead) this.inFilesHead.textContent = total ? total + ' files loaded' : 'No files yet';
     if (this.inFilesChip) this.inFilesChip.innerHTML = icon('done') + (total ? total + ' files attached' : 'No files yet');
     this.inFilesChip?.classList.toggle('ok', total > 0);
-    this.sampleBtn.querySelector('span:last-child').textContent = total ? 'Start over with the sample documents' : 'Load all sample documents';
     this.startBtn.disabled = !!this.started;
-    this.startBtn.querySelector('span').textContent = this.started ? 'Run started' : 'Start the run';
+    this.startBtn.querySelector('span').textContent = this.started ? 'Analyzing' : 'Analyze';
   }
 
   /* ---------- the detail panel ---------- */
@@ -607,13 +808,18 @@ class LiveDashboard extends Dashboard {
         const certFile = i.cert_file_id && s.files.find(f => f.id === i.cert_file_id);
         html.push(head('cert', i.name, (i.supplier_name || 'No supplier on file') + (i.source === 'found_on_site' ? ', found on site' : '')),
           boxes(['Result', ST_TEXT[i.status] || i.status, ST_RESULT[i.status] === 'ok' ? 'ok' : ST_RESULT[i.status] === 'warn' ? 'warn' : 'bad'], ['Valid until', i.expiry_date ? niceDate(i.expiry_date) : '—']),
+          i.cert_checks ? h('span', { class: 'mono-l sec' }, (i.cert_checks.filter(c => c.ok).length) + ' of ' + i.cert_checks.length + ' checks passed') : null,
+          i.cert_checks ? checkList(i.cert_checks) : null,
           h('span', { class: 'mono-l sec' }, 'Certificate'),
-          grid([['Brand', i.brand || '—'], ['Certificate no.', i.cert_number || '—'], ['Issued by', i.status === 'unclear' ? 'Unreadable' : (i.issuer || '—'), true], ['Used in', (i.products || []).join(', ') || '—', true], ['Checked by', 'Certificate Checker'], ['Tool', 'record_certificate'], ['File', certFile ? certFile.filename : 'None on file', true]]));
+          grid([['Brand', i.brand || '—'], ['Certificate no.', i.cert_number || '—'], ['Issued by', i.status === 'unclear' ? 'Unreadable' : (i.issuer || '—'), true], ['Used in', (i.products || []).join(', ') || '—', true], ['Tool', 'check_certificate'], ['File', certFile ? certFile.filename : 'None on file', true]]));
+        if (ST_RESULT[i.status] !== 'ok' && i.cert_id) html.push(h('span', { class: 'mono-l sec' }, 'Proposed next step'), this.stepBox(this.ingStep(i)));
         if (ST_RESULT[i.status] !== 'ok' || i.cert_file_id) html.push(h('button', { class: 'btn btn-ink btn-sm dbtn', type: 'button', onclick: () => this.openEvidence('ing:' + i.id) }, icon('eye'), 'See the evidence'));
       } else if (m.kind === 'zone') {
         const z = s.site.zones.find(x => x.zone === m.zone.zone) || m.zone;
-        html.push(head('eye', ZONE_LABEL[z.zone], 'Site photo, checked by the On-site Inspector'), boxes(['Result', bad ? 'Possible issue' : 'Clear', bad ? 'bad' : 'ok'], ['Findings', String(z.findings.length)]),
-          grid(z.findings.map(f => [f.severity === 'ok' ? 'Checked' : 'Flagged', f.title + (f.detail ? '. ' + f.detail : ''), true]).concat([['Tool', 'save_site_finding']])),
+        const last = z.findings.filter(f => f.checks).pop();
+        const zc = (last && last.checks) || [];
+        html.push(head('eye', ZONE_LABEL[z.zone], 'Zone photo, checked by the On-site Inspector'), boxes(['Result', bad ? 'Fix needed' : 'Clear', bad ? 'bad' : 'ok'], ['Checks', zc.filter(c => c.ok).length + ' / ' + zc.length]),
+          checkList(zc), bad ? h('span', { class: 'mono-l sec' }, 'Proposed next step') : null, bad ? this.stepBox(this.zoneStep(z)) : null,
           h('button', { class: 'btn btn-ink btn-sm dbtn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, icon('eye'), 'See the photo'));
       } else if (m.kind === 'doc' || m.kind === 'review') {
         const doc = s.documents.find(x => x.id === m.doc.id) || m.doc;
@@ -644,6 +850,7 @@ class LiveDashboard extends Dashboard {
           h('div', null, h('b', null, a.human ? 'Mak Teh (you)' : a.name), h('span', { class: 'dsub mono' }, a.human ? 'Owner, approves the plan and messages' : 'workbuddy/sub-agent/' + (AGENT_SLUG[id] || id)))),
         boxes(['Status', STATE_LABEL[st], st === 'waiting' ? 'warn' : st === 'flag' ? 'bad' : st === 'done' ? 'ok' : st === 'working' ? 'ink' : ''], ['Progress', prog ? prog[0] + ' / ' + prog[1] : '—']),
         h('p', { class: 'dnow' }, this.status[id] || ''),
+        ...(steps => steps.length ? [h('span', { class: 'mono-l sec' }, 'Proposed next step'), ...steps.map(st => this.stepBox(st))] : [])(this.nextSteps(id)),
         h('span', { class: 'mono-l sec' }, 'Run details'),
         grid([['Tools', (LIVE_TOOLS[id] || (id === 'owner' ? ['approvals in the dashboard'] : id === 'pack' ? ['assemble_pack'] : [])).join(', '), true],
           ['Flagged', String(this.badCount(id))], ['Tasks', mine.length ? mine.filter(t => t.status === 'done').length + ' done of ' + mine.length : '—'],
@@ -657,11 +864,22 @@ class LiveDashboard extends Dashboard {
   }
 
   /* ---------- evidence: the real file, what was checked, what was found ---------- */
-  openFileView(fid, title) {
-    this.drawerTitle.textContent = title || 'File';
+  openDrawer(kicker, title, body) {
+    const k = this.drawer.querySelector('.drawer-h .mono-l');
+    if (k) { k.textContent = kicker; k.className = 'mono-l ' + (kicker === 'Problem' ? 'bad' : kicker === 'Checked' ? 'ok' : ''); }
+    this.drawerTitle.textContent = title;
     this.drawerBody.innerHTML = '';
-    this.drawerBody.append(h('div', { class: 'evd' }, h('div', { class: 'evd-src' }, h('img', { class: 'evd-img', src: fileUrl(fid), alt: title || '' }))));
+    this.drawerBody.append(body);
     this.drawer.classList.add('open');
+    this.lastFocus = document.activeElement;
+    setTimeout(() => this.drawerClose.focus({ preventScroll: true }), 60);
+  }
+  openFileView(fid, title) {
+    const f = (this.snap && this.snap.files.find(x => x.id === fid)) || { id: fid, filename: title || '' };
+    this.openDrawer('File', f.filename || title || 'File',
+      h('div', { class: 'evd' }, h('div', { class: 'evd-src' }, fileView(f)),
+        h('p', { class: 'evd-cap', html: icon(fileIcon(f.filename)) + '<span>' + esc(f.filename) + '</span>' }),
+        h('a', { class: 'btn btn-line btn-sm fb-dl', href: fileUrl(fid), download: f.filename }, icon('folder'), 'Download')));
   }
   openEvidence(key) {
     const s = this.snap; if (!s || !key) return;
@@ -669,43 +887,43 @@ class LiveDashboard extends Dashboard {
     const wrap = h('div', { class: 'evd' });
     const rows = h('dl', { class: 'evd-rows' });
     const row = (k, v) => rows.append(h('div', { class: 'evd-row' }, h('dt', null, k), h('dd', { html: v })));
-    let title = 'Evidence', fileId = null, caption = '';
+    let title = 'Evidence', kicker = 'Checked', src = null, caption = '', checks = [];
     if (kind === 'ing') {
       const i = s.ingredients.find(x => String(x.id) === ref); if (!i) return;
-      title = i.source === 'found_on_site' ? 'Undeclared item: ' + (i.brand || i.name) : i.name + ': ' + (ST_TEXT[i.status] || i.status).toLowerCase();
-      if (i.source === 'found_on_site') {
-        const photo = s.files.find(f => f.zone === 'store'); fileId = photo && photo.id; caption = photo ? photo.filename + ', store shelf' : '';
-        row('Found by', 'On-site Inspector <span class="tool">compare_store_brands</span>, then Certificate Checker <span class="tool">check_brand</span>');
-        row('Checked', 'Every brand on the store shelf against your declared ingredient list and the certificates on file');
-        row('Read on the label', '<span class="mono">' + esc(i.brand || '') + '</span>');
-        row('Result', '<strong>Not on your ingredient list, and no certificate on file</strong>');
-        row('Next step', 'Remove it from the store, or declare it with its supplier and a valid certificate.');
-      } else {
-        const inv = i.status === 'missing' ? s.files.find(f => /invoice|invois/i.test(f.filename) && (i.supplier_name || '').split(' ').some(w => w.length > 3 && f.filename.toLowerCase().includes(w.toLowerCase()))) : null;
-        fileId = i.cert_file_id || (inv && inv.id);
-        const f = fileId && s.files.find(x => x.id === fileId); caption = f ? f.filename : 'No file on record';
-        row('Found by', 'Certificate Checker <span class="tool">record_certificate</span>');
-        row('Checked', i.status === 'missing' ? 'Every certificate in the Suppliers tray, for ' + esc(i.name) + ' (' + esc(i.brand || '') + ')' : i.status === 'unclear' ? 'Image sharpness, then the issuer, number and expiry date on the scan' : 'Issuer against JAKIM’s recognised list, and the expiry date against today, ' + niceDate(s.overview.today));
-        row('Result', '<strong>' + esc({ missing: 'No certificate on file' + (inv ? '; the invoice proves ' + esc(i.supplier_name) + ' supplies it' : ''), unclear: 'The scan is too blurred to read. Nothing on it was guessed.', expired: 'Expired on ' + niceDate(i.expiry_date), unrecognised_issuer: esc(i.issuer) + ' is not on the recognised list', valid: 'Valid until ' + niceDate(i.expiry_date) + (i.issuer ? ', issued by ' + i.issuer : ''), expiring: 'Expires on ' + niceDate(i.expiry_date) }[i.status] || i.status) + '</strong>');
-        row('Next step', esc({ missing: 'Supplier Chaser drafted a message to ' + (i.supplier_name || 'the supplier') + '. It waits for your approval.', unclear: 'Upload a clearer copy or photo of the certificate.', expired: 'Ask the supplier for the renewed certificate.', unrecognised_issuer: 'Ask for a certificate from a recognised body, or switch supplier.', valid: 'Nothing to do.', expiring: 'Renewal Watch will ask the supplier before it expires.' }[i.status] || ''));
+      const f = i.cert_file_id && s.files.find(x => x.id === i.cert_file_id);
+      checks = i.cert_checks || [];
+      const failed = checks.filter(c => !c.ok);
+      kicker = ST_RESULT[i.status] === 'ok' ? 'Checked' : 'Problem';
+      title = i.name + ': ' + (ST_TEXT[i.status] || i.status).toLowerCase();
+      if (f) {
+        src = marked(fileUrl(f.id), checks.map(c => ({ box: c.box, key: c.key, tone: c.ok ? 'ok' : 'bad' })), f.filename);
+        src.classList.add(failed.length ? 'show-bad' : 'show-none');
+        caption = f.filename + (failed.length ? ', the field in red' : '');
       }
+      row('Checked by', 'Certificate Checker <span class="tool">check_certificate</span>');
+      row('Supplier', esc(i.supplier_name || '—') + (i.brand ? ', brand ' + esc(i.brand) : ''));
+      if (failed.length) row('What’s wrong', '<strong>' + failed.map(c => esc(c.label)).join('<br>') + '</strong>');
+      row('Next step', esc({ missing: 'Upload the certificate from the checklist.', expired: 'Ask ' + (i.supplier_name || 'the supplier') + ' for the renewed certificate, then upload it from the checklist.', unclear: 'Upload a clearer copy.', unrecognised_issuer: 'Ask for a certificate from a recognised body, or switch supplier.', valid: 'Nothing to do.', expiring: 'Renewal Watch will ask the supplier before it expires.' }[i.status] || ''));
     } else if (kind === 'zone') {
       const z = s.site.zones.find(x => x.zone === ref); if (!z) return;
-      const photo = s.files.find(f => f.zone === ref); fileId = photo && photo.id; caption = photo ? photo.filename : 'No photo';
-      title = ZONE_LABEL[ref] + (z.status === 'issue' ? ': possible issue' : ': checked');
-      row('Found by', 'On-site Inspector <span class="tool">save_site_finding</span>');
-      row('Checked', 'Brands against the declared list; chemicals near food, pests, uncovered waste, cleanliness');
-      z.findings.forEach(f => row(f.severity === 'ok' ? 'Seen' : 'Flagged', '<strong>' + esc(f.title) + '</strong>' + (f.detail ? '<br>' + esc(f.detail) : '')));
-      row('Next step', z.status === 'issue' ? 'Fix it, or explain it to the Inspector. It stays open in the Premises Fix Tracker.' : 'Nothing to do.');
-    }
-    const src = h('div', { class: 'evd-src' }, fileId ? h('img', { class: 'evd-img', src: fileUrl(fileId), alt: caption }) : h('p', { class: 'evd-none' }, 'No file on record'));
-    wrap.append(src, h('p', { class: 'evd-cap', html: icon('eye') + '<span>' + esc(caption) + '</span>' }), rows);
-    this.drawerTitle.textContent = title;
-    this.drawerBody.innerHTML = '';
-    this.drawerBody.append(wrap);
-    this.drawer.classList.add('open');
-    this.lastFocus = document.activeElement;
-    setTimeout(() => this.drawerClose.focus({ preventScroll: true }), 60);
+      const last = z.findings.filter(f => f.checks).pop() || {};
+      checks = last.checks || [];
+      const photo = (last.photo_file_id && s.files.find(f => f.id === last.photo_file_id)) || s.files.find(f => f.zone === ref);
+      kicker = z.status === 'issue' ? 'Problem' : 'Checked';
+      title = ZONE_LABEL[ref] + (z.status === 'issue' ? ': fix needed' : ': all checks passed');
+      if (photo) {
+        src = marked(fileUrl(photo.id), checks.filter(c => !c.ok).map(c => ({ box: c.box })), photo.filename);
+        caption = photo.filename;
+      }
+      row('Checked by', 'On-site Inspector <span class="tool">check_zone</span>');
+      if (z.status === 'issue' && last.suggestion) row('Suggested fix', esc(last.suggestion));
+      else row('Next step', 'Nothing to do.');
+    } else return;
+    wrap.append(h('div', { class: 'evd-src' }, src || h('p', { class: 'evd-none' }, 'No file on record')),
+      caption ? h('p', { class: 'evd-cap', html: icon('eye') + '<span>' + esc(caption) + '</span>' }) : null,
+      checks.length ? h('span', { class: 'mono-l sec' }, checks.filter(c => c.ok).length + ' of ' + checks.length + ' checks passed') : null,
+      checks.length ? checkList(checks, src) : null, rows);
+    this.openDrawer(kicker, title, wrap);
   }
 
   /* ---------- tab 3: the pack, from what the agents produced ---------- */
@@ -741,6 +959,14 @@ class LiveDashboard extends Dashboard {
       this.fileBtns[f.id] = b;
       this.pkList.append(b);
     });
+    /* first: the readiness checklist, with a follow-up on every open row */
+    const chk = h('button', { class: 'fb-row', type: 'button', role: 'tab', 'aria-selected': 'false', 'data-state': 'pending', onclick: () => this.showFile('chk') },
+      h('span', { class: 'file-ico ft-sheet', html: icon('list') }),
+      h('span', { class: 'fb-name' }, h('span', null, 'Readiness checklist'), h('small', null, 'Score and what is still open')),
+      h('span', { class: 'pk-st', 'aria-label': 'Status' }, 'Waiting'));
+    this.fileBtns.chk = chk;
+    this.pkList.prepend(chk);
+    this.pkFile = 'chk';
   }
   fileReady(id) {
     const s = this.snap; if (!s) return false;
@@ -757,7 +983,10 @@ class LiveDashboard extends Dashboard {
   syncPackFiles() {
     if (!this.snap) return;
     LIVE_FILES.forEach(f => { const b = this.fileBtns[f.id], ok = this.fileReady(f.id); b.dataset.state = ok ? 'ready' : 'pending'; b.querySelector('.pk-st').textContent = ok ? 'Ready' : 'Waiting'; });
-    const pk = this.snap.pack;
+    const pk = this.snap.pack, cb = this.fileBtns.chk;
+    Object.keys(this.followUps || {}).forEach(k => { const it = pk.sections.flatMap(x => x.items).find(x => x.key === k); if (it && it.status === 'ready') delete this.followUps[k]; });
+    cb.dataset.state = pk.latest_pack ? 'ready' : 'pending';
+    cb.querySelector('.pk-st').textContent = pk.latest_pack ? Math.round(this.snap.overview.readiness.score) + '%' : 'Waiting';
     this.pkHeadTotal.textContent = ' of ' + pk.items_total + ' items ready';
     this.pkTodo.innerHTML = '';
     pk.missing.forEach(m => {
@@ -765,15 +994,60 @@ class LiveDashboard extends Dashboard {
       this.pkTodo.append(h('li', null, h('label', null, h('input', { type: 'checkbox' }), h('span', null, m.label + ': ' + (m.reason || 'missing'))),
         ev ? h('button', { class: 'fb-ev', type: 'button', onclick: () => this.openEvidence(ev) }, 'Evidence') : null));
     });
-    this.pkTodoBox.hidden = !this.snap.overview.latest_pack || !pk.missing.length;
+    this.pkTodoBox.hidden = true;
     this.pkDownload.hidden = !this.snap.overview.latest_pack;
   }
   showFile(id) { this.pkFile = id; this.pkSub = 0; this.renderPack(); }
+  /* the output: readiness score and a checklist per section; every open row has its follow-up */
+  renderChecklist() {
+    const s = this.snap, v = this.pkView;
+    this.pkCrumb.textContent = 'Readiness checklist';
+    v.innerHTML = '';
+    if (!this.started || !s) return;
+    const pk = s.pack, r = s.overview.readiness;
+    if (!pk.latest_pack) {
+      v.append(h('div', { class: 'pg pg-wait' }, h('div', { class: 'pg-skel' }, ...[70, 92, 84, 60, 88, 76].map(w => h('i', { style: { width: w + '%' } }))),
+        h('p', null, 'The Coordinator builds the checklist when the agents finish.')));
+      return;
+    }
+    const ingOf = key => s.ingredients.find(i => 'cert:' + i.id === key);
+    const action = it => {
+      const out = [];
+      const ev = it.key.startsWith('cert:') ? 'ing:' + it.key.slice(5) : it.key.startsWith('zone:') ? it.key : null;
+      if (it.status !== 'ready' && (it.key.startsWith('cert:') || (it.key.startsWith('zone:') && /^open/.test(it.reason || '')))) {
+        const zone = it.key.startsWith('zone:'), ing = ingOf(it.key);
+        out.push(this.uploadBtn(it.key, zone ? 'Upload new photo' : ing && ing.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', zone ? 'On-site Inspector' : 'Certificate Checker'));
+      }
+      if (it.key.startsWith('doc:') && it.status !== 'ready' && it.document_id) {
+        const ap = s.approvals.find(a => a.kind === 'document' && a.document_id === it.document_id && a.status === 'pending');
+        out.push(h('button', { class: 'btn btn-line btn-sm', type: 'button', onclick: () => { const d = s.documents.find(x => x.id === it.document_id); this.pkFile = d && d.doc_type === 'halal_policy' ? 'f3' : 'f4'; this.pkSub = d && d.doc_type === 'traceability' ? 1 : 0; this.renderPack(); } }, 'Read'));
+        if (ap) out.push(h('button', { class: 'btn btn-ink btn-sm', type: 'button', onclick: e => { e.currentTarget.disabled = true; livePost('/approvals/' + ap.id + '/approve').then(() => { this.toast('Approved: ' + it.label + '.'); this.refreshSoon(); }).catch(err => this.toast(err.message)); } }, 'Approve'));
+      }
+      if (ev) out.push(h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence(ev) }, it.status === 'ready' ? 'View' : 'See where'));
+      else if (it.file_id) out.push(h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openFileView(it.file_id) }, 'View'));
+      return out;
+    };
+    const RC = 2 * Math.PI * 30;
+    const ring = h('div', { class: 'rc-ring', html: '<svg viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="30" class="sr-bg"/><circle cx="36" cy="36" r="30" class="sr-fg" stroke="url(#hr-ring)" stroke-dasharray="' + RC.toFixed(1) + '" stroke-dashoffset="' + (RC * (1 - r.score / 100)).toFixed(1) + '" transform="rotate(-90 36 36)"/></svg><b class="tnum">' + r.score + '<small>%</small></b>' });
+    const open = pk.items_total - pk.items_ready;
+    v.append(h('div', { class: 'rc' },
+      h('header', { class: 'rc-head' }, ring,
+        h('div', { class: 'rc-sum' }, h('span', { class: 'mono-l' }, 'Readiness score'), h('b', null, pk.items_ready + ' of ' + pk.items_total + ' items ready'),
+          h('span', null, open ? open + ' open item' + (open > 1 ? 's' : '') + ', highlighted below with what to do next.' : 'Everything is ready. You can submit on MYeHALAL.')),
+        h('a', { class: 'btn btn-line btn-sm', href: '/business/' + LIVE_BIZ + '/pack/download' }, icon('folder'), 'Download the pack')),
+      ...pk.sections.map(sec => h('section', { class: 'rc-sec' },
+        h('h3', null, h('span', null, sec.title.replace(/^\d+\.\s*/, '')), h('span', { class: 'rc-n tnum' }, sec.items.filter(i => i.status === 'ready').length + ' / ' + sec.items.length)),
+        h('ul', null, ...sec.items.map(it => h('li', { class: 'rc-row ' + (it.status === 'ready' ? 'ok' : 'open') },
+          h('span', { class: 'ck-i', html: icon(it.status === 'ready' ? 'check' : 'alert') }),
+          h('div', { class: 'rc-t' }, h('b', null, it.label.replace(/^Site self-check: (\w)/, (_, c) => 'Premises: ' + c.toUpperCase())), h('span', null, (it.status === 'ready' ? (it.note || 'Ready') : (it.reason || 'Missing')).replace(/\d{4}-\d{2}-\d{2}/g, d => niceDate(d)).replace(/^expires/, 'Valid until'))),
+          h('div', { class: 'rc-a' }, ...action(it)))))))));
+  }
   renderPack() {
     if (!this.pkView) return;
     const s = this.snap;
     this.pkLock.hidden = !!this.started;
     Object.entries(this.fileBtns).forEach(([fid, b]) => b.setAttribute('aria-selected', fid === this.pkFile ? 'true' : 'false'));
+    if (this.pkFile === 'chk') return this.renderChecklist();
     const f = LIVE_FILES.find(x => x.id === this.pkFile) || LIVE_FILES[0];
     this.pkCrumb.textContent = f.name;
     const v = this.pkView;
@@ -856,10 +1130,10 @@ class LiveDashboard extends Dashboard {
   }
 
   /* ---------- the agents themselves: running, offline, out of quota ---------- */
-  startAgents() {
+  startAgents(quiet) {
     this.agentBtn.disabled = true;
     livePost('/demo/agents/start').then(() => {
-      this.toast('Starting the seven agents…');
+      if (!quiet) this.toast('Starting the agents…');
       this.runner = Object.assign({}, this.runner, { starting: true }); this.syncRunner();
       [2500, 5000, 9000].forEach(ms => setTimeout(() => this.refreshSoon(), ms));
     }).catch(err => { this.agentBtn.disabled = false; this.toast(err.message); });
@@ -876,35 +1150,59 @@ class LiveDashboard extends Dashboard {
     this.agentBtn.hidden = !!(r.running || r.starting);
     this.agentBtn.disabled = false;
     this.agentStop.hidden = !r.running;
+    /* a run with work left and no agents (a restart, a reload): bring them back */
+    if (!r.running && !r.starting && this.started && !this.autoStarted) { this.autoStarted = true; this.startAgents(true); }
     this.refreshState();
   }
 
-  /* ---------- demo controls (stage helpers) ---------- */
+  /* ---------- the shell: agents kept running quietly, a small start-over button ---------- */
   build() {
     super.build();
-    this.agentText = h('b', null, 'Agents offline');
-    this.agentSub = h('span', null, 'Start them to process the run');
-    this.agentBtn = h('button', { class: 'btn btn-ink btn-sm', type: 'button', onclick: () => this.startAgents() }, icon('play'), 'Start the agents');
+    /* the agents are started with Analyze; their box stays out of sight */
+    this.agentText = h('b', null, '');
+    this.agentSub = h('span', null, '');
+    this.agentBtn = h('button', { class: 'btn btn-ink btn-sm', type: 'button', onclick: () => this.startAgents() }, icon('play'), 'Start');
     this.agentStop = h('button', { class: 'agent-stop', type: 'button', hidden: true, onclick: () => this.stopAgents() }, 'Stop');
-    this.agentBox = h('div', { class: 'agent-box', 'data-state': 'off' }, h('span', { class: 'agent-dot', 'aria-hidden': 'true' }),
-      h('div', { class: 'agent-t' }, this.agentText, this.agentSub), this.agentBtn, this.agentStop);
+    this.agentBox = h('div', { class: 'agent-box', 'data-state': 'off', hidden: true }, this.agentText, this.agentSub, this.agentBtn, this.agentStop);
     this.ranFor.after(this.agentBox);
-    const menu = h('div', { class: 'demo-menu' });
-    const list = h('div', { class: 'demo-list', role: 'menu', hidden: true });
-    const btn = h('button', { class: 'btn btn-line btn-sm', type: 'button', 'aria-haspopup': 'true', onclick: e => { e.stopPropagation(); list.hidden = !list.hidden; } }, 'Demo');
-    const item = (label, sub, fn) => h('button', { type: 'button', role: 'menuitem', onclick: () => { list.hidden = true; fn(); } }, h('b', null, label), h('span', null, sub));
-    const call = (path, ok, after) => livePost(path).then(r => { this.toast(ok(r)); after && after(); this.refreshSoon(); }).catch(err => this.toast(err.message));
-    const clock = (today, ok) => liveApi('/clock', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ today }) }).then(r => { this.toast(ok(r)); this.refreshSoon(); }).catch(err => this.toast(err.message));
-    list.append(
-      item('Reset the demo', 'Empty case, date 15 Oct 2026', () => call('/demo/reset', () => 'Demo reset.', () => setTimeout(() => location.reload(), 400))),
-      item('Load the sample case', '15 files, unsorted', () => call('/demo/load-sample', r => r.files + ' sample files loaded.')),
-      item('Supplier replies (fallback)', 'Minyak Murni sends the oil certificate', () => call('/demo/supplier-reply', () => 'Minyak Murni replied with the certificate.')),
-      item('Owner sends clearer copy', 'Ikan bilis certificate, readable', () => call('/demo/owner-copy', () => 'Clearer copy sent to the Certificate Checker.')),
-      item('Jump 4 months ahead', '15 Feb 2027, wakes Renewal Watch', () => clock('2027-02-15', r => 'Date is now ' + niceDate(r.today) + '. ' + r.triggered_tasks.length + ' renewal task(s).')),
-      item('Back to the demo date', '15 Oct 2026', () => clock('2026-10-15', () => 'Back to 15 Oct 2026.')));
-    document.addEventListener('click', e => { if (!menu.contains(e.target)) list.hidden = true; });
-    menu.append(btn, list);
+    const replay = $('.replay', this.root); if (replay) replay.hidden = true;
+    /* start over: two taps, so it is never hit by accident */
+    let armed = null;
+    const reset = h('button', { class: 'icon-btn reset-btn', type: 'button', title: 'Start over', 'aria-label': 'Start over', html: icon('restart') });
+    reset.addEventListener('click', () => {
+      if (!armed) { reset.classList.add('armed'); reset.title = 'Tap again to start over'; armed = setTimeout(() => { armed = null; reset.classList.remove('armed'); reset.title = 'Start over'; }, 3000); return; }
+      clearTimeout(armed);
+      livePost('/demo/reset').then(() => { location.hash = '#demo'; location.reload(); }).catch(err => this.toast(err.message));
+    });
     const end = $('.dt-end', this.root);
-    end.insertBefore(menu, end.children[1] || null);
+    end.insertBefore(reset, end.children[1] || null);
+  }
+
+  /* ---------- the graph: no Auditor, and the pack is the output step, not a node ---------- */
+  buildGraph() {
+    super.buildGraph();
+    HIDDEN_NODES.forEach(id => this.G[id].el.remove());
+    this.links = this.links.filter(l => { const gone = HIDDEN_NODES.includes(l.a) || HIDDEN_NODES.includes(l.b); if (gone) l.el.remove(); return !gone; });
+    HIDDEN_NODES.forEach(id => delete this.baseLinks[id]);
+    const l = svgEl('line', { class: 'gk dashed' });
+    this.gLinks.append(l);
+    this.links.push({ a: 'coord', b: 'renewal', el: l });
+    this.baseLinks.renewal = l;
+  }
+  layout() {
+    const W = this.gWrap.clientWidth, H = this.gWrap.clientHeight;
+    if (!W || !H) return;
+    this.W = W; this.H = H;
+    this.svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    NODE_ORDER.forEach(id => {
+      const n = this.G[id];
+      const nx = LIVE_ANCHOR[id][0] * W, ny = LIVE_ANCHOR[id][1] * H;
+      const dx = nx - n.x, dy = ny - n.y;
+      n.x = nx; n.y = ny;
+      this.sats.filter(s => s.parent === id).forEach(s => { s.x += dx; s.y += dy; });
+      n.el.setAttribute('transform', 'translate(' + nx.toFixed(1) + ' ' + ny.toFixed(1) + ')');
+    });
+    this.drawLinks();
+    this.kick();
   }
 }

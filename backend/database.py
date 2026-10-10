@@ -76,7 +76,7 @@ async def connect():
         await db.close()
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 async def init_db():
@@ -237,6 +237,9 @@ CREATE TABLE IF NOT EXISTS certificates (
     issuer_recognised INTEGER,           -- 1, 0, or NULL when not checked
     legible           INTEGER NOT NULL DEFAULT 1,  -- 0 = the scan could not be read; status 'unclear'
     file_id           INTEGER REFERENCES files(id),
+    holder            TEXT,              -- company name on the certificate
+    products          TEXT,              -- JSON: products the certificate covers
+    checks            TEXT,              -- JSON list: what was checked (key, label, ok, detail, box)
     created_at        TEXT NOT NULL
 );
 
@@ -266,6 +269,8 @@ CREATE TABLE IF NOT EXISTS site_findings (
     question      TEXT,                  -- something the owner must answer (records a photo cannot show)
     answer        TEXT,                  -- the owner's answer
     photo_file_id INTEGER REFERENCES files(id),
+    checks        TEXT,                  -- JSON list: the zone checklist (label, ok, detail, box)
+    suggestion    TEXT,                  -- what the owner can do about it
     status        TEXT NOT NULL DEFAULT 'open' {_check('status', ['open', 'resolved'])},
     created_at    TEXT NOT NULL,
     resolved_at   TEXT
@@ -305,7 +310,7 @@ CREATE TABLE IF NOT EXISTS approvals (
     status        TEXT NOT NULL DEFAULT 'pending'
                   {_check('status', ['pending', 'approved', 'rejected', 'sent', 'failed', 'replied'])},
     comment       TEXT,
-    channel       TEXT {_check('channel', ['whatsapp', 'telegram', 'manual'], nullable=True)},
+    channel       TEXT {_check('channel', ['whatsapp', 'telegram', 'email', 'manual'], nullable=True)},
     recipient     TEXT,                  -- phone or Telegram chat id the message went to
     external_id   TEXT,                  -- Twilio SID or Telegram message id
     send_error    TEXT,

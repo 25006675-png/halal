@@ -1,0 +1,688 @@
+{
+ "today": "2026-10-15",
+ "company": {
+  "name": "Mak Teh Sambal Sdn Bhd",
+  "reg_no": "202301099999 (1500999-X)",
+  "address": "Lot 7, Jalan Perusahaan 3/2, Seksyen 15, 40200 Shah Alam, Selangor",
+  "owner": "Siti Rahmah binti Yusof (Mak Teh)",
+  "supervisor": "Nurul Ain binti Hassan"
+ },
+ "suppliers": [
+  [
+   "Syarikat Cili Maju",
+   "Encik Halim",
+   "+60 11-0000 0101",
+   "Dried chilli",
+   "CILI MAJU"
+  ],
+  [
+   "Minyak Murni Sdn Bhd",
+   "Puan Aishah",
+   "+60 11-0000 0202",
+   "Palm cooking oil, 17 kg tin",
+   "MURNI"
+  ],
+  [
+   "Bawang Segar Enterprise",
+   "Encik Kumar",
+   "+60 11-0000 0303",
+   "Shallot paste, garlic paste",
+   "BAWANG SEGAR"
+  ],
+  [
+   "Hasil Laut Kuala",
+   "Puan Zainab",
+   "+60 11-0000 0404",
+   "Ikan bilis (dried anchovies)",
+   "HASIL LAUT"
+  ],
+  [
+   "Gula Manis Sdn Bhd",
+   "Encik Lim",
+   "+60 11-0000 0505",
+   "Fine sugar, 1 kg bag",
+   "GULA MANIS"
+  ]
+ ],
+ "ingredients": [
+  [
+   "Dried chilli",
+   "CILI MAJU",
+   "Syarikat Cili Maju",
+   "processed",
+   [
+    "Sambal Tumis",
+    "Sambal Ikan Bilis"
+   ]
+  ],
+  [
+   "Cooking oil",
+   "MURNI",
+   "Minyak Murni Sdn Bhd",
+   "processed",
+   [
+    "Sambal Tumis",
+    "Sambal Ikan Bilis"
+   ]
+  ],
+  [
+   "Shallot paste",
+   "BAWANG SEGAR",
+   "Bawang Segar Enterprise",
+   "processed",
+   [
+    "Sambal Tumis",
+    "Sambal Ikan Bilis"
+   ]
+  ],
+  [
+   "Garlic paste",
+   "BAWANG SEGAR",
+   "Bawang Segar Enterprise",
+   "processed",
+   [
+    "Sambal Tumis",
+    "Sambal Ikan Bilis"
+   ]
+  ],
+  [
+   "Ikan bilis",
+   "HASIL LAUT",
+   "Hasil Laut Kuala",
+   "processed",
+   [
+    "Sambal Ikan Bilis"
+   ]
+  ],
+  [
+   "Sugar",
+   "GULA MANIS",
+   "Gula Manis Sdn Bhd",
+   "processed",
+   [
+    "Sambal Tumis",
+    "Sambal Ikan Bilis"
+   ]
+  ]
+ ],
+ "files": [
+  {
+   "filename": "01_SSM_registration.pdf",
+   "category": "company",
+   "kind": "registration"
+  },
+  {
+   "filename": "02_Company_profile.pdf",
+   "category": "company",
+   "kind": "other"
+  },
+  {
+   "filename": "03_Ingredient_list.xlsx",
+   "category": "products",
+   "kind": "other"
+  },
+  {
+   "filename": "04_Supplier_list.xlsx",
+   "category": "suppliers",
+   "kind": "other"
+  },
+  {
+   "filename": "05_Recipe_Sambal_Tumis.pdf",
+   "category": "products",
+   "kind": "recipe"
+  },
+  {
+   "filename": "06_Recipe_Sambal_Ikan_Bilis.pdf",
+   "category": "products",
+   "kind": "recipe"
+  },
+  {
+   "filename": "07_Halal_cert_Cili_Maju.jpg",
+   "category": "suppliers",
+   "kind": "certificate",
+   "supplier": "Syarikat Cili Maju"
+  },
+  {
+   "filename": "08_Halal_cert_Bawang_Segar.jpg",
+   "category": "suppliers",
+   "kind": "certificate",
+   "supplier": "Bawang Segar Enterprise"
+  },
+  {
+   "filename": "09_Halal_cert_Minyak_Murni.jpg",
+   "category": "suppliers",
+   "kind": "certificate",
+   "supplier": "Minyak Murni Sdn Bhd"
+  },
+  {
+   "filename": "10_Halal_cert_Hasil_Laut.jpg",
+   "category": "suppliers",
+   "kind": "certificate",
+   "supplier": "Hasil Laut Kuala"
+  },
+  {
+   "filename": "11_Halal_cert_Gula_Manis.jpg",
+   "category": "suppliers",
+   "kind": "certificate",
+   "supplier": "Gula Manis Sdn Bhd"
+  },
+  {
+   "filename": "12_Photo_store.jpg",
+   "category": "site",
+   "kind": "photo",
+   "zone": "store"
+  },
+  {
+   "filename": "13_Photo_processing.jpg",
+   "category": "site",
+   "kind": "photo",
+   "zone": "processing"
+  },
+  {
+   "filename": "14_Photo_packing.jpg",
+   "category": "site",
+   "kind": "photo",
+   "zone": "packing"
+  },
+  {
+   "filename": "15_Photo_cleaning.jpg",
+   "category": "site",
+   "kind": "photo",
+   "zone": "cleaning"
+  },
+  {
+   "filename": "16_Photo_waste.jpg",
+   "category": "site",
+   "kind": "photo",
+   "zone": "waste"
+  }
+ ],
+ "certificates": [
+  {
+   "file": "07_Halal_cert_Cili_Maju.jpg",
+   "key": "chilli",
+   "supplier": "Syarikat Cili Maju",
+   "holder": "Syarikat Cili Maju",
+   "products": [
+    "Cili Kering (Dried Chilli) - jenama CILI MAJU"
+   ],
+   "number": "HC-CM-2025-0412",
+   "issued": "1 Sep 2025",
+   "expiry": "31 Aug 2027",
+   "expiry_iso": "2027-08-31",
+   "issuer": "Jabatan Kemajuan Islam Malaysia (JAKIM)",
+   "ingredients": [
+    "Dried chilli"
+   ],
+   "boxes": {
+    "title": [
+     0.2,
+     0.2,
+     0.8,
+     0.2667
+    ],
+    "holder": [
+     0.4,
+     0.332,
+     0.9091,
+     0.364
+    ],
+    "products": [
+     0.4,
+     0.364,
+     0.9091,
+     0.396
+    ],
+    "number": [
+     0.4,
+     0.396,
+     0.9091,
+     0.428
+    ],
+    "issued": [
+     0.4,
+     0.428,
+     0.9091,
+     0.46
+    ],
+    "expiry": [
+     0.4,
+     0.46,
+     0.9091,
+     0.492
+    ],
+    "issuer": [
+     0.4,
+     0.492,
+     0.9091,
+     0.524
+    ]
+   }
+  },
+  {
+   "file": "08_Halal_cert_Bawang_Segar.jpg",
+   "key": "shallot_garlic",
+   "supplier": "Bawang Segar Enterprise",
+   "holder": "Bawang Segar Enterprise",
+   "products": [
+    "Pes Bawang Merah (Shallot Paste) - jenama BAWANG SEGAR",
+    "Pes Bawang Putih (Garlic Paste) - jenama BAWANG SEGAR"
+   ],
+   "number": "HC-BS-2025-0733",
+   "issued": "1 Mar 2025",
+   "expiry": "28 Feb 2027",
+   "expiry_iso": "2027-02-28",
+   "issuer": "Jabatan Kemajuan Islam Malaysia (JAKIM)",
+   "ingredients": [
+    "Shallot paste",
+    "Garlic paste"
+   ],
+   "boxes": {
+    "title": [
+     0.2,
+     0.2,
+     0.8,
+     0.2667
+    ],
+    "holder": [
+     0.4,
+     0.332,
+     0.9091,
+     0.364
+    ],
+    "products": [
+     0.4,
+     0.364,
+     0.9091,
+     0.4707
+    ],
+    "number": [
+     0.4,
+     0.4707,
+     0.9091,
+     0.5027
+    ],
+    "issued": [
+     0.4,
+     0.5027,
+     0.9091,
+     0.5347
+    ],
+    "expiry": [
+     0.4,
+     0.5347,
+     0.9091,
+     0.5667
+    ],
+    "issuer": [
+     0.4,
+     0.5667,
+     0.9091,
+     0.5987
+    ]
+   }
+  },
+  {
+   "file": "09_Halal_cert_Minyak_Murni.jpg",
+   "key": "oil",
+   "supplier": "Minyak Murni Sdn Bhd",
+   "holder": "Minyak Murni Sdn Bhd",
+   "products": [
+    "Minyak Masak Sawit (Palm Cooking Oil) - jenama MURNI"
+   ],
+   "number": "HC-MM-2024-0587",
+   "issued": "1 Sep 2024",
+   "expiry": "31 Aug 2026",
+   "expiry_iso": "2026-08-31",
+   "issuer": "Jabatan Kemajuan Islam Malaysia (JAKIM)",
+   "ingredients": [
+    "Cooking oil"
+   ],
+   "boxes": {
+    "title": [
+     0.2,
+     0.2,
+     0.8,
+     0.2667
+    ],
+    "holder": [
+     0.4,
+     0.332,
+     0.9091,
+     0.364
+    ],
+    "products": [
+     0.4,
+     0.364,
+     0.9091,
+     0.4173
+    ],
+    "number": [
+     0.4,
+     0.4173,
+     0.9091,
+     0.4493
+    ],
+    "issued": [
+     0.4,
+     0.4493,
+     0.9091,
+     0.4813
+    ],
+    "expiry": [
+     0.4,
+     0.4813,
+     0.9091,
+     0.5133
+    ],
+    "issuer": [
+     0.4,
+     0.5133,
+     0.9091,
+     0.5453
+    ]
+   }
+  },
+  {
+   "file": "10_Halal_cert_Hasil_Laut.jpg",
+   "key": "ikan_bilis",
+   "supplier": "Hasil Laut Kuala",
+   "holder": "Hasil Laut Kuala",
+   "products": [
+    "Ikan Bilis Kering (Dried Anchovies) - jenama HASIL LAUT"
+   ],
+   "number": "JAIS-HLK-2025-0158",
+   "issued": "1 Oct 2025",
+   "expiry": "30 Sep 2027",
+   "expiry_iso": "2027-09-30",
+   "issuer": "Jabatan Agama Islam Selangor (JAIS)",
+   "ingredients": [
+    "Ikan bilis"
+   ],
+   "boxes": {
+    "title": [
+     0.2,
+     0.2,
+     0.8,
+     0.2667
+    ],
+    "holder": [
+     0.4,
+     0.332,
+     0.9091,
+     0.364
+    ],
+    "products": [
+     0.4,
+     0.364,
+     0.9091,
+     0.4173
+    ],
+    "number": [
+     0.4,
+     0.4173,
+     0.9091,
+     0.4493
+    ],
+    "issued": [
+     0.4,
+     0.4493,
+     0.9091,
+     0.4813
+    ],
+    "expiry": [
+     0.4,
+     0.4813,
+     0.9091,
+     0.5133
+    ],
+    "issuer": [
+     0.4,
+     0.5133,
+     0.9091,
+     0.5453
+    ]
+   }
+  },
+  {
+   "file": "11_Halal_cert_Gula_Manis.jpg",
+   "key": "sugar",
+   "supplier": "Gula Manis Sdn Bhd",
+   "holder": "Gula Manis Sdn Bhd",
+   "products": [
+    "Gula Pasir Halus (Fine Sugar) - jenama GULA MANIS"
+   ],
+   "number": "HC-GM-2025-0961",
+   "issued": "1 Apr 2025",
+   "expiry": "31 Mar 2027",
+   "expiry_iso": "2027-03-31",
+   "issuer": "Jabatan Kemajuan Islam Malaysia (JAKIM)",
+   "ingredients": [
+    "Sugar"
+   ],
+   "boxes": {
+    "title": [
+     0.2,
+     0.2,
+     0.8,
+     0.2667
+    ],
+    "holder": [
+     0.4,
+     0.332,
+     0.9091,
+     0.364
+    ],
+    "products": [
+     0.4,
+     0.364,
+     0.9091,
+     0.4173
+    ],
+    "number": [
+     0.4,
+     0.4173,
+     0.9091,
+     0.4493
+    ],
+    "issued": [
+     0.4,
+     0.4493,
+     0.9091,
+     0.4813
+    ],
+    "expiry": [
+     0.4,
+     0.4813,
+     0.9091,
+     0.5133
+    ],
+    "issuer": [
+     0.4,
+     0.5133,
+     0.9091,
+     0.5453
+    ]
+   }
+  }
+ ],
+ "renewed_certificate": {
+  "file": "Halal_cert_Minyak_Murni_2026.jpg",
+  "key": "oil_renewed",
+  "supplier": "Minyak Murni Sdn Bhd",
+  "holder": "Minyak Murni Sdn Bhd",
+  "products": [
+   "Minyak Masak Sawit (Palm Cooking Oil) - jenama MURNI"
+  ],
+  "number": "HC-MM-2026-0912",
+  "issued": "1 Sep 2026",
+  "expiry": "31 Aug 2028",
+  "expiry_iso": "2028-08-31",
+  "issuer": "Jabatan Kemajuan Islam Malaysia (JAKIM)",
+  "ingredients": [
+   "Cooking oil"
+  ],
+  "boxes": {
+   "title": [
+    0.2,
+    0.2,
+    0.8,
+    0.2667
+   ],
+   "holder": [
+    0.4,
+    0.332,
+    0.9091,
+    0.364
+   ],
+   "products": [
+    0.4,
+    0.364,
+    0.9091,
+    0.4173
+   ],
+   "number": [
+    0.4,
+    0.4173,
+    0.9091,
+    0.4493
+   ],
+   "issued": [
+    0.4,
+    0.4493,
+    0.9091,
+    0.4813
+   ],
+   "expiry": [
+    0.4,
+    0.4813,
+    0.9091,
+    0.5133
+   ],
+   "issuer": [
+    0.4,
+    0.5133,
+    0.9091,
+    0.5453
+   ]
+  }
+ },
+ "zones": {
+  "store": {
+   "title": "Raw material store",
+   "checks": [
+    {
+     "label": "Every brand on the shelf is on your ingredient list",
+     "ok": false,
+     "detail": "2 tins of CAP MERPATI HIJAU cooking oil, top shelf on the right. Your ingredient list has MURNI oil only.",
+     "box": [
+      0.665,
+      0.205,
+      0.885,
+      0.43
+     ]
+    },
+    {
+     "label": "Raw materials kept off the floor",
+     "ok": true,
+     "detail": "Everything is on the rack or the pallet."
+    },
+    {
+     "label": "No non-halal items stored with ingredients",
+     "ok": true,
+     "detail": "None seen."
+    },
+    {
+     "label": "Containers closed and labelled",
+     "ok": true,
+     "detail": "Sacks, tubs and tins are labelled."
+    }
+   ],
+   "suggestion": "Move the 2 Cap Merpati Hijau tins out of the store, or add that oil to your ingredient list with its halal certificate. Then upload a new photo of the same shelf."
+  },
+  "processing": {
+   "title": "Processing area",
+   "checks": [
+    {
+     "label": "No non-halal items or utensils",
+     "ok": true,
+     "detail": "Only the sambal ingredients are out."
+    },
+    {
+     "label": "Hygiene sign displayed",
+     "ok": true,
+     "detail": "Hairnet, apron and gloves sign on the wall."
+    },
+    {
+     "label": "Work surfaces clean",
+     "ok": true,
+     "detail": "Clean steel tables."
+    }
+   ]
+  },
+  "packing": {
+   "title": "Packing area",
+   "checks": [
+    {
+     "label": "Labels and batch codes checked",
+     "ok": true,
+     "detail": "'Check label & batch code' sign above the table."
+    },
+    {
+     "label": "Jars closed after filling",
+     "ok": true,
+     "detail": "All 10 jars have lids."
+    },
+    {
+     "label": "No foreign items on the packing table",
+     "ok": true,
+     "detail": "Only Mak Teh jars."
+    }
+   ]
+  },
+  "cleaning": {
+   "title": "Cleaning area",
+   "checks": [
+    {
+     "label": "Chemicals in a closed cabinet, away from food",
+     "ok": true,
+     "detail": "Red cabinet marked 'Cleaning chemicals only'."
+    },
+    {
+     "label": "Hand soap at the sink",
+     "ok": true,
+     "detail": "Soap dispenser next to the sink."
+    }
+   ]
+  },
+  "waste": {
+   "title": "Waste area",
+   "checks": [
+    {
+     "label": "Bins have lids and are closed",
+     "ok": true,
+     "detail": "All 3 bins are closed."
+    },
+    {
+     "label": "Waste kept outside production",
+     "ok": true,
+     "detail": "Behind the back door."
+    }
+   ]
+  }
+ },
+ "documents": {
+  "halal_policy": {
+   "title": "Halal Policy",
+   "body": "## Policy statement\nMak Teh Sambal Sdn Bhd produces Sambal Tumis Mak Teh and Sambal Ikan Bilis Mak Teh as halal food. We use only ingredients with a valid halal certificate from a body recognised by JAKIM, and we keep our premises free of anything that is not halal.\n\n## Scope\nThis policy covers both products, every ingredient and supplier, the factory unit at Lot 7, Jalan Perusahaan 3/2, Seksyen 15, 40200 Shah Alam, Selangor, and all six production and packing staff.\n\n## Halal supervisor\nNurul Ain binti Hassan is the halal supervisor. She checks incoming ingredients, keeps the certificate register up to date and briefs new staff before they start work.\n\n## Commitments\n- Buy only from the approved supplier list, and only brands named on it\n- Keep every supplier's halal certificate on file and renew it before it expires\n- Keep anything not on the ingredient list out of the store and the production area\n- Train staff on halal handling when they join and every six months\n- Review this policy once a year, or whenever a product, supplier or process changes\n\n## Approval\nApproved by Siti Rahmah binti Yusof (Mak Teh), Managing Director. To be signed and dated before submission.\n"
+  },
+  "ingredient_control": {
+   "title": "Ingredient Control Procedure",
+   "body": "## Purpose\nMake sure every ingredient used in Mak Teh sambal comes from an approved supplier and has a valid halal certificate on file.\n\n## Approved suppliers\nIngredients are bought only from the five suppliers on the approved supplier list (updated 1 Oct 2026): Syarikat Cili Maju, Minyak Murni Sdn Bhd, Bawang Segar Enterprise, Hasil Laut Kuala and Gula Manis Sdn Bhd. A new supplier is added only after its certificate has been checked.\n\n## Receiving checks\nAt every delivery the store keeper checks that the brand matches the approved list, that the halal logo and certificate number are on the pack, and that the packaging is intact. The supplier's lot number is written in the receiving log.\n\n## Certificate monitoring\nThe halal supervisor keeps a register of every certificate with its number, issuer and expiry date. Sixty days before a certificate expires, the supplier is asked for the renewed one.\n\n## Non-conforming materials\nAnything without a valid certificate, or a brand that is not on the list, is kept apart, labelled 'Do not use' and reported to the owner the same day. It is returned or thrown away, never used.\n\n## Records\nThe receiving log, the certificate register and copies of all certificates are kept for at least three years.\n"
+  },
+  "traceability": {
+   "title": "Traceability Procedure",
+   "body": "## Purpose\nMake it possible to trace any jar back to the ingredient lots it was made from, and every ingredient lot forward to the jars that used it.\n\n## Batch coding\nEvery batch gets a code: product letter, date and batch number (for example T-261015-01). The code is printed on every jar label.\n\n## Records\nFor each batch the production lead records the date, the batch code, the lot number of every ingredient used, the staff on the shift and the number of jars filled.\n\n## Tracing a product\nStarting from the batch code on a jar, the batch record shows the ingredient lots; the receiving log shows which delivery and supplier each lot came from.\n\n## Recall\nIf an ingredient is found not to be halal, every batch that used its lot is identified from the records, held, and recalled from customers. The owner informs JAKIM within 24 hours.\n"
+  }
+ }
+}

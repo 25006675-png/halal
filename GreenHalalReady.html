@@ -2329,7 +2329,7 @@ const ISSUES = {
     checked: 'Valid-until date against today, 10 Oct 2026',
     result: 'Expired on 14 Aug 2026, 57 days ago',
     next: 'Supplier Chaser drafted a renewal request to Sinar Rempah Trading. It waits for your approval.',
-    todo: 'Chilli paste: waiting for Sinar Rempah Trading to send the renewed certificate.'
+    todo: 'Chilli paste: approve the follow-up to Sinar Rempah Trading and get the renewed certificate.'
   },
   issuer: {
     title: 'Flavouring issuer not recognised', short: 'Rasa Aroma Imports', agent: 'checker', tool: 'check_recognised_bodies',
@@ -2359,7 +2359,9 @@ const MSG = {
 };
 
 /* ---------- The run, as a timeline of events (seconds of demo time) ---------- */
-const TS = 1.32;          /* stretch the base timings */
+/* Fixed demo flow: times are seconds after Start, which is 0:40 in the demo video.
+   0–10 team kicks off, 10–45 supplier check, 45–80 premises check, 80–105 pack built. */
+const TS = 1;             /* stretch the base timings */
 const WALL_START = 9 * 3600;
 const WALL_RATE = 7;      /* one demo second shows as seven seconds of agent time */
 function wallClock(t) {
@@ -2379,100 +2381,103 @@ function buildScript() {
   const at = (t, type, d = {}) => E.push(Object.assign({ t: t * TS, type }, d));
   const gated = (gate, delay, minT, type, d = {}) => E.push(Object.assign({ t: minT * TS, gate, gateDelay: delay * TS, type }, d));
 
+  /* 0–10 s, team kicks off: the graph lights up and the Coordinator splits the work across three agents */
   at(0.15, 'node', { id: 'owner', state: 'done', status: 'Sent one instruction' });
   at(0.15, 'feed', { agent: 'owner', kind: 'prompt', text: 'Prepare Mak Teh Sambal’s halal certification application.' });
   at(0.4, 'edge', { from: 'owner', to: 'coord', tone: 'human', label: 'One prompt' });
   at(0.9, 'node', { id: 'coord', state: 'working', status: 'Reading your folder' });
-  at(1.8, 'feed', { agent: 'coord', text: 'Found 12 supplier certificates, 34 ingredients and a 6-minute premises video.', tool: 'read_folder' });
-  for (let i = 0; i < 6; i++) at(2.0 + i * 0.12, 'req', { group: 'company', index: i, state: 'met' });
-  at(2.8, 'node', { id: 'coord', state: 'waiting', status: 'Plan ready: 6 tasks, 4 in parallel' });
-  at(2.8, 'feed', { agent: 'coord', text: 'Planned 6 tasks. Certificates, the site video and your documents will run in parallel.', tool: 'plan' });
-  at(3.7, 'feed', { agent: 'owner', text: 'Approved the plan in WorkBuddy.' });
-  at(3.7, 'edge', { from: 'owner', to: 'coord', tone: 'human', label: 'Plan approved' });
-  at(3.7, 'node', { id: 'owner', status: 'Approved the plan' });
-  at(3.7, 'plan', {});
-  at(4.2, 'node', { id: 'coord', state: 'working', status: 'Sending work to 4 agents' });
-  at(4.3, 'edge', { from: 'coord', to: 'checker', label: '12 certificates' });
-  at(4.4, 'edge', { from: 'coord', to: 'inspector', label: 'Premises video' });
-  at(4.5, 'edge', { from: 'coord', to: 'writer', label: 'Process notes' });
-  at(4.6, 'edge', { from: 'coord', to: 'chaser', label: 'Stand by' });
-  at(4.6, 'node', { id: 'chaser', state: 'idle', status: 'On standby for follow-ups' });
-  at(5.6, 'node', { id: 'coord', state: 'working', status: 'Watching 4 agents work' });
+  at(2.2, 'feed', { agent: 'coord', text: 'Found 12 supplier certificates, 34 ingredients and a 6-minute premises video.', tool: 'read_folder' });
+  for (let i = 0; i < 6; i++) at(2.4 + i * 0.12, 'req', { group: 'company', index: i, state: 'met' });
+  at(3.6, 'node', { id: 'coord', state: 'waiting', status: 'Plan ready: 6 tasks, 3 in parallel' });
+  at(3.6, 'feed', { agent: 'coord', text: 'Planned 6 tasks. Certificates, the site video and your documents will run in parallel.', tool: 'plan' });
+  at(5.0, 'feed', { agent: 'owner', text: 'Approved the plan in WorkBuddy.' });
+  at(5.0, 'edge', { from: 'owner', to: 'coord', tone: 'human', label: 'Plan approved' });
+  at(5.0, 'node', { id: 'owner', status: 'Approved the plan' });
+  at(5.0, 'plan', {});
+  at(6.0, 'node', { id: 'coord', state: 'working', status: 'Sending work to 3 agents' });
+  at(6.4, 'edge', { from: 'coord', to: 'checker', label: '12 certificates' });
+  at(6.8, 'edge', { from: 'coord', to: 'inspector', label: 'Premises video' });
+  at(7.2, 'edge', { from: 'coord', to: 'writer', label: 'Process notes' });
+  at(7.2, 'node', { id: 'chaser', state: 'idle', status: 'On standby for follow-ups' });
+  at(7.0, 'node', { id: 'checker', state: 'working', status: 'Opening 12 certificates' });
+  at(7.4, 'node', { id: 'inspector', state: 'working', status: 'Extracting frames from the video' });
+  at(7.6, 'node', { id: 'writer', state: 'working', status: 'Drafting the halal policy' });
+  at(8.5, 'node', { id: 'coord', state: 'working', status: 'Watching 3 agents work' });
 
-  /* Certificate Checker: 12 certificates */
-  at(4.8, 'node', { id: 'checker', state: 'working', status: 'Reading certificate 1 of 12' });
+  /* 10–45 s, supplier check: every certificate, the expired one, the follow-up email */
   CERTS.forEach((c, i) => {
-    const t = 5.0 + i * 1.45;
-    if (i > 0) at(t - 0.55, 'node', { id: 'checker', status: 'Reading certificate ' + (i + 1) + ' of 12' });
+    const t = 11 + i * 2.5;
+    at(t - 0.8, 'node', { id: 'checker', status: 'Reading certificate ' + (i + 1) + ' of 12' });
     at(t, 'dot', { agent: 'checker', id: c.id, result: c.result, label: c.item + ', ' + c.supplier + (c.result === 'ok' ? ': valid until ' + c.valid : ''), issue: c.issue });
     at(t, 'req', { group: 'certs', index: i, state: c.result === 'ok' ? 'met' : 'failed' });
     if (c.issue === 'expired') {
       at(t, 'feed', { agent: 'checker', tone: 'bad', text: 'Chilli paste certificate from Sinar Rempah Trading expired on 14 Aug 2026.', tool: 'read_certificate', ev: 'expired' });
       at(t + 0.1, 'issue', { id: 'expired' });
-      at(t + 0.55, 'edge', { from: 'checker', to: 'chaser', tone: 'bad', label: 'Expired certificate', arc: 'over' });
+      at(t + 0.7, 'edge', { from: 'checker', to: 'chaser', tone: 'bad', label: 'Expired certificate', arc: 'over' });
     }
     if (c.issue === 'issuer') {
-      at(t - 0.35, 'feed', { agent: 'checker', text: 'Checking Northgate Halal Council against JAKIM’s recognised list.', tool: 'check_recognised_bodies' });
+      at(t - 0.5, 'feed', { agent: 'checker', text: 'Checking Northgate Halal Council against JAKIM’s recognised list.', tool: 'check_recognised_bodies' });
       at(t, 'feed', { agent: 'checker', tone: 'bad', text: 'Northgate Halal Council is not on JAKIM’s list of recognised foreign certification bodies.', tool: 'check_recognised_bodies', ev: 'issuer' });
       at(t + 0.1, 'issue', { id: 'issuer' });
     }
-    if (i === 5) at(t + 0.25, 'feed', { agent: 'checker', text: '6 of 12 certificates read. 2 problems so far.' });
+    if (i === 5) at(t + 0.4, 'feed', { agent: 'checker', text: '6 of 12 certificates read. 2 problems so far.' });
   });
-  at(21.6, 'node', { id: 'checker', state: 'flag', status: '12 of 12 read, 2 need action' });
-  at(21.7, 'feed', { agent: 'checker', tone: 'ok', text: 'All 12 certificates read. 10 are valid. The soy sauce certificate from Kicap Seri Bayu expires in 30 days.' });
+  at(40.0, 'node', { id: 'checker', state: 'flag', status: '12 of 12 read, 2 need action' });
+  at(40.3, 'feed', { agent: 'checker', tone: 'ok', text: 'All 12 certificates read. 10 are valid. The soy sauce certificate from Kicap Seri Bayu expires in 30 days.' });
 
-  /* Supplier Chaser and the approval gate */
-  at(7.5, 'node', { id: 'chaser', state: 'working', status: 'Drafting a renewal request' });
-  at(9.3, 'approval', { id: 'msg' });
+  /* Supplier Chaser drafts the follow-up. Hands-free: the run never waits for the approval */
+  at(15.0, 'node', { id: 'chaser', state: 'working', status: 'Drafting a renewal request' });
+  at(22.0, 'approval', { id: 'msg' });
   gated('msg', 0.2, 0, 'node', { id: 'chaser', state: 'working', status: 'Sending on WhatsApp' });
   gated('msg', 0.25, 0, 'edge', { from: 'owner', to: 'chaser', tone: 'human', label: 'Approved', arc: 'owner' });
   gated('msg', 0.9, 0, 'feed', { agent: 'chaser', tone: 'ok', text: 'Sent to Encik Razak at Sinar Rempah Trading on WhatsApp.', tool: 'send_after_approval' });
   gated('msg', 0.9, 0, 'dot', { agent: 'chaser', id: 'm1', result: 'ok', label: 'Message to Sinar Rempah Trading, sent' });
   gated('msg', 1.0, 0, 'node', { id: 'chaser', state: 'done', status: 'Sent. Waiting for a reply' });
 
-  /* On-site Inspector: the walkthrough video */
-  at(4.9, 'node', { id: 'inspector', state: 'working', status: 'Watching the premises video' });
+  /* 45–80 s, premises check: the walkthrough video, zone by zone with timestamps */
+  at(45.0, 'node', { id: 'inspector', status: 'Watching the premises video' });
+  at(45.2, 'feed', { agent: 'inspector', text: 'Frames extracted. Reviewing the premises video zone by zone.', tool: 'extract_video_frames' });
   ZONES.forEach((z, j) => {
-    const t = 5.6 + j * 2.3;
-    at(t - 0.5, 'node', { id: 'inspector', status: z.zone + ', ' + z.tc });
+    const t = 47 + j * 4.6;
+    at(t - 0.8, 'node', { id: 'inspector', status: z.zone + ', ' + z.tc });
     at(t, 'dot', { agent: 'inspector', id: z.id, result: z.result, label: z.tc + ' ' + z.zone + ': ' + z.note, issue: z.issue });
     if (z.req != null) at(t, 'req', { group: 'premises', index: z.req, state: z.result === 'ok' ? 'met' : 'failed' });
     if (z.issue === 'oil') {
       at(t, 'feed', { agent: 'inspector', tone: 'bad', text: '02:14, store room: oil tins labelled Cap Merpati Hijau. That brand is not on your ingredient list.', tool: 'extract_video_frames', ev: 'oil' });
-      at(t + 0.5, 'edge', { from: 'inspector', to: 'checker', tone: 'bad', label: 'Oil brand seen at 02:14', arc: 'under' });
-      at(t + 1.4, 'node', { id: 'checker', status: 'Looking up Cap Merpati Hijau' });
-      at(t + 1.6, 'feed', { agent: 'checker', tone: 'bad', text: 'No certificate on file for Cap Merpati Hijau cooking oil.', tool: 'check_jakim_directory', ev: 'oil' });
-      at(t + 1.6, 'dot', { agent: 'checker', id: 'x1', result: 'bad', extra: true, label: 'Extra lookup: Cap Merpati Hijau oil, no certificate', issue: 'oil' });
-      at(t + 1.75, 'issue', { id: 'oil' });
+      at(t + 0.6, 'edge', { from: 'inspector', to: 'checker', tone: 'bad', label: 'Oil brand seen at 02:14', arc: 'under' });
+      at(t + 1.8, 'node', { id: 'checker', state: 'working', status: 'Looking up Cap Merpati Hijau' });
+      at(t + 2.4, 'feed', { agent: 'checker', tone: 'bad', text: 'No certificate on file for Cap Merpati Hijau cooking oil.', tool: 'check_jakim_directory', ev: 'oil' });
+      at(t + 2.4, 'dot', { agent: 'checker', id: 'x1', result: 'bad', extra: true, label: 'Extra lookup: Cap Merpati Hijau oil, no certificate', issue: 'oil' });
+      at(t + 2.6, 'issue', { id: 'oil' });
+      at(t + 3.4, 'node', { id: 'checker', state: 'flag', status: '12 read plus 1 lookup, 3 need action' });
     }
   });
-  at(17.8, 'node', { id: 'inspector', state: 'flag', status: '6 zones checked, 1 thing to fix' });
-  at(17.9, 'feed', { agent: 'inspector', text: 'Finished the walkthrough. 6 zones checked, 1 thing to fix in the store room.' });
+  at(74.0, 'node', { id: 'inspector', state: 'flag', status: '6 zones checked, 1 thing to fix' });
+  at(74.2, 'feed', { agent: 'inspector', text: 'Finished the walkthrough. 6 zones checked, 1 thing to fix in the store room.' });
 
-  /* Document Writer and Auditor */
-  at(5.0, 'node', { id: 'writer', state: 'working', status: 'Drafting the halal policy' });
-  const docT = [7.8, 12.4, 15.2, 18.0, 20.8, 22.6];
+  /* Document Writer and Auditor, in the background until the pack */
+  const docT = [14, 20, 26, 30, 34, 52];
   DOCS.forEach((d, k) => {
     const t = docT[k];
     at(t, 'dot', { agent: 'writer', id: d.id, result: 'ink', label: d.name + ': drafted, waiting for the Auditor' });
     at(t, 'edge', { from: 'writer', to: 'auditor', label: d.name });
-    if (k < DOCS.length - 1) at(t + 0.25, 'node', { id: 'writer', status: 'Drafting the ' + DOCS[k + 1].name.charAt(0).toLowerCase() + DOCS[k + 1].name.slice(1) });
-    if (k === 0) at(t + 0.4, 'node', { id: 'auditor', state: 'working', status: 'Reviewing the halal policy' });
-    const r = t + 0.9;
+    if (k < DOCS.length - 1) at(t + 0.3, 'node', { id: 'writer', status: 'Drafting the ' + DOCS[k + 1].name.charAt(0).toLowerCase() + DOCS[k + 1].name.slice(1) });
+    if (k === 0) at(t + 0.5, 'node', { id: 'auditor', state: 'working', status: 'Reviewing the halal policy' });
+    const r = t + 1.5;
     if (d.rework) {
       at(r, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'warn', label: d.name + ': returned, ' + d.rework.toLowerCase() });
       at(r, 'dot', { agent: 'writer', id: d.id, result: 'warn', label: d.name + ': returned by the Auditor' });
       at(r, 'feed', { agent: 'auditor', tone: 'bad', text: 'Returned the cleaning procedure. It does not say how often surfaces are cleaned.', tool: 'check_requirements' });
-      at(r + 0.2, 'edge', { from: 'auditor', to: 'writer', tone: 'bad', label: 'Returned: no frequency', arc: 'rework' });
-      at(r + 0.3, 'node', { id: 'auditor', status: 'Waiting for draft 2' });
-      at(r + 0.6, 'node', { id: 'writer', status: 'Revising the cleaning procedure' });
-      at(24.4, 'edge', { from: 'writer', to: 'auditor', label: 'Cleaning procedure, draft 2' });
-      at(24.4, 'dot', { agent: 'writer', id: d.id, result: 'ink', label: d.name + ': draft 2 sent' });
-      at(24.6, 'node', { id: 'writer', state: 'done', status: '6 documents drafted, 1 revised' });
-      at(25.4, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'ok', label: d.name + ': passed on draft 2' });
-      at(25.4, 'dot', { agent: 'writer', id: d.id, result: 'ok', label: d.name + ': passed on draft 2' });
-      at(25.4, 'req', { group: 'docs', index: k, state: 'met' });
-      at(25.5, 'feed', { agent: 'auditor', tone: 'ok', text: 'Cleaning procedure passed on draft 2.', tool: 'check_requirements' });
+      at(r + 0.3, 'edge', { from: 'auditor', to: 'writer', tone: 'bad', label: 'Returned: no frequency', arc: 'rework' });
+      at(r + 0.5, 'node', { id: 'auditor', status: 'Waiting for draft 2' });
+      at(53.0, 'node', { id: 'writer', status: 'Revising the cleaning procedure' });
+      at(56.0, 'edge', { from: 'writer', to: 'auditor', label: 'Cleaning procedure, draft 2' });
+      at(56.0, 'dot', { agent: 'writer', id: d.id, result: 'ink', label: d.name + ': draft 2 sent' });
+      at(56.3, 'node', { id: 'writer', state: 'done', status: '6 documents drafted, 1 revised' });
+      at(57.5, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'ok', label: d.name + ': passed on draft 2' });
+      at(57.5, 'dot', { agent: 'writer', id: d.id, result: 'ok', label: d.name + ': passed on draft 2' });
+      at(57.5, 'req', { group: 'docs', index: k, state: 'met' });
+      at(57.6, 'feed', { agent: 'auditor', tone: 'ok', text: 'Cleaning procedure passed on draft 2.', tool: 'check_requirements' });
     } else {
       at(r, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'ok', label: d.name + ': passed' });
       at(r, 'dot', { agent: 'writer', id: d.id, result: 'ok', label: d.name + ': passed' });
@@ -2481,28 +2486,25 @@ function buildScript() {
       if (k > 0 && k < 5) at(r + 0.05, 'node', { id: 'auditor', status: 'Passed the ' + d.name.charAt(0).toLowerCase() + d.name.slice(1) });
     }
   });
-  at(18.6, 'dot', { agent: 'auditor', id: 'aft', result: 'ok', label: 'Premises fix tracker: reviewed' });
-  at(22.2, 'dot', { agent: 'auditor', id: 'acr', result: 'ok', label: 'Certificate register: reviewed, 2 items for the owner' });
-  at(25.8, 'node', { id: 'auditor', state: 'done', status: 'Everything reviewed, 1 rework' });
+  at(41.5, 'dot', { agent: 'auditor', id: 'acr', result: 'ok', label: 'Certificate register: reviewed, 2 items for the owner' });
+  at(76.0, 'dot', { agent: 'auditor', id: 'aft', result: 'ok', label: 'Premises fix tracker: reviewed' });
+  at(78.5, 'node', { id: 'auditor', state: 'done', status: 'Everything reviewed, 1 rework' });
 
-  /* The Application Pack */
-  at(26.3, 'node', { id: 'coord', state: 'working', status: 'Building the Application Pack' });
-  at(26.5, 'edge', { from: 'auditor', to: 'pack', label: 'Reviewed work' });
-  at(26.6, 'node', { id: 'pack', state: 'working', status: 'Collecting 6 files' });
-  FILES.forEach((f, k) => {
-    if (f.gate) gated(f.gate, 1.4, 27.0 + k * 0.5, 'file', { id: f.id });
-    else at(27.0 + k * 0.5, 'file', { id: f.id });
-  });
-  gated('msg', 2.0, 30.4, 'packReady', {});
-  gated('pack', 1.1, 0, 'edge', { from: 'pack', to: 'renewal', tone: 'ink', label: 'Keep it current' });
-  gated('pack', 1.3, 0, 'node', { id: 'renewal', state: 'working', status: 'Setting a weekly check' });
-  gated('pack', 2.0, 0, 'feed', { agent: 'renewal', text: 'Scheduled a weekly check in WorkBuddy, every Monday at 09:00.', tool: 'scheduled_task' });
-  gated('pack', 2.9, 0, 'feed', { agent: 'renewal', text: 'The soy sauce certificate from Kicap Seri Bayu expires on 9 Nov 2026. A follow-up is planned for 26 Oct.' });
-  gated('pack', 3.0, 0, 'node', { id: 'renewal', state: 'done', status: 'Weekly, Mondays at 09:00' });
-  gated('pack', 3.7, 0, 'complete', {});
+  /* 80–105 s, pack built: the Application Pack and the short fix-list */
+  at(80.5, 'node', { id: 'coord', state: 'working', status: 'Building the Application Pack' });
+  at(81.0, 'edge', { from: 'auditor', to: 'pack', label: 'Reviewed work' });
+  at(81.5, 'node', { id: 'pack', state: 'working', status: 'Collecting 6 files' });
+  FILES.forEach((f, k) => at(83 + k * 2, 'file', { id: f.id }));
+  at(96.0, 'packReady', {});
+  gated('pack', 1.5, 0, 'edge', { from: 'pack', to: 'renewal', tone: 'ink', label: 'Keep it current' });
+  gated('pack', 1.8, 0, 'node', { id: 'renewal', state: 'working', status: 'Setting a weekly check' });
+  gated('pack', 3.0, 0, 'feed', { agent: 'renewal', text: 'Scheduled a weekly check in WorkBuddy, every Monday at 09:00.', tool: 'scheduled_task' });
+  gated('pack', 5.0, 0, 'feed', { agent: 'renewal', text: 'The soy sauce certificate from Kicap Seri Bayu expires on 9 Nov 2026. A follow-up is planned for 26 Oct.' });
+  gated('pack', 5.2, 0, 'node', { id: 'renewal', state: 'done', status: 'Weekly, Mondays at 09:00' });
+  gated('pack', 8.0, 0, 'complete', {});
   return E;
 }
-const RUN_EXPECTED = 36 * TS;
+const RUN_EXPECTED = 105 * TS;
 
 /* ---------- Agent roster for the site ---------- */
 const ROSTER = [
@@ -2875,7 +2877,7 @@ class Dashboard {
     this.autoApprove = !!opts.autoApprove;
     this.loop = !!opts.loop;
     this.uid = ++DASH_UID;
-    this.speed = 1;
+    this.speed = this.embed ? 2 : 1;   /* the landing preview plays the 105 s demo flow at 2× */
     this.playing = false;
     this.lastTs = null;
     this.lastSlow = 0;
@@ -3028,7 +3030,7 @@ class Dashboard {
     this.scrub = h('input', { class: 'scrub', type: 'range', min: 0, max: 1000, value: 0, 'aria-label': 'Replay position' });
     this.scrub.addEventListener('input', () => this.seek(this.scrub.value / 1000 * RUN_EXPECTED));
     const speeds = h('div', { class: 'speeds', role: 'group', 'aria-label': 'Playback speed' });
-    [1, 2, 5, 10].forEach(s => speeds.append(h('button', { type: 'button', 'aria-pressed': s === 1 ? 'true' : 'false', onclick: e => this.setSpeed(s, e.currentTarget) }, s + '×')));
+    [1, 2, 5, 10].forEach(s => speeds.append(h('button', { type: 'button', 'aria-pressed': s === this.speed ? 'true' : 'false', onclick: e => this.setSpeed(s, e.currentTarget) }, s + '×')));
     this.toPack = h('button', { class: 'btn btn-ink ag-pack', type: 'button', onclick: () => this.setTab('pack') }, icon('folder'), 'Open the Application Pack');
     L.append(
       h('span', { class: 'mono-l' }, 'Case'), this.caseText,
@@ -3259,14 +3261,12 @@ class Dashboard {
     this.settle(220);
     this.renderDetail();
   }
-  /* jump to any point: replay instantly from the start, approving on the way */
+  /* jump to any point: replay instantly from the start (the message stays a draft) */
   seek(t) {
     const was = this.playing;
     this.started = true;
     this.reset();
     const pick = this.selected;
-    this.advance(Math.min(t, 9.3 * TS + 1), true);
-    if (t > 9.3 * TS + 1 && this.gateAsk != null && this.gates.msg == null) { this.t = this.gateAsk + 1; this.approve(true, true); }
     this.advance(t, true);
     this.selected = pick;
     this.updateNumbers(true);
@@ -3844,7 +3844,7 @@ class Dashboard {
       } else if (k === 0) {
         prev = h('div', { class: 'wa' }, h('div', { class: 'wa-h' }, h('span', { class: 'msg-av' }, MSG.initials), h('div', null, h('b', null, MSG.to), h('span', null, MSG.org))),
           h('div', { class: 'wa-b' }, h('span', { class: 'wa-day' }, 'Today'), h('div', { class: 'bubble' }, h('span', { lang: 'ms' }, this.draftText || MSG.ms), h('div', { class: 'bubble-meta', html: '<span>' + (this.gates.msg != null ? wallClock(this.gates.msg + 0.9 * TS).slice(0, 5) : '') + '</span>' + icon('ticks') })),
-            h('p', { class: 'wa-sys' }, 'Sent after Mak Teh approved it')));
+            h('p', { class: 'wa-sys' }, this.gates.msg != null ? 'Sent after Mak Teh approved it' : 'Draft, waiting for Mak Teh’s approval')));
       } else {
         prev = h('div', { class: 'wa' }, h('div', { class: 'wa-h' }, h('span', { class: 'msg-av' }, 'KS'), h('div', null, h('b', null, 'Kicap Seri Bayu'), h('span', null, 'Planned by Renewal Watch'))),
           h('div', { class: 'wa-b' }, h('span', { class: 'wa-day' }, '26 Oct 2026'), h('p', { class: 'wa-sys' }, 'The soy sauce certificate expires on 9 Nov 2026. A follow-up will be drafted on 26 Oct and wait for your approval.')));

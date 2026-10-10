@@ -398,10 +398,13 @@ async def approve(approval_id: int, req: Approve = Approve()):
 
         supplier = await fetch_one(db, "SELECT * FROM suppliers WHERE id = ?", (a["supplier_id"],))
         result = await messaging.deliver(a, supplier)
+        if result["channel"] == "manual" and a["channel"]:
+            result["channel"] = a["channel"]   # messaging is off: record it on the channel the owner chose
         await update(db, "approvals", approval_id, {**result, "sent_at": now_iso() if result["status"] == "sent" else None})
         await db.commit()
         if result["status"] == "sent":
-            how = "for you to send" if result["channel"] == "manual" else f"via {result['channel'].title()}"
+            how = {"manual": "for you to send", "email": "by email", "whatsapp": "on WhatsApp",
+                   "telegram": "on Telegram"}.get(result["channel"], f"via {result['channel']}")
             await state.post_event(db, a["business_id"], "supplier_chaser",
                                    f"Sent to {supplier['name']} {how}"[:120], "ok", approval_id=approval_id)
         else:
@@ -713,6 +716,81 @@ async def list_files(business_id: int, category: Optional[str] = None):
             return await fetch_all(db, "SELECT * FROM files WHERE business_id = ? AND category = ?",
                                    (business_id, category))
         return await fetch_all(db, "SELECT * FROM files WHERE business_id = ? ORDER BY id", (business_id,))
+
+
+@router.get("/files/{file_id}/sheet")
+async def file_sheet(file_id: int, limit: int = 60):
+    """The first sheet of an .xlsx file as rows, for the file viewer."""
+    from openpyxl import load_workbook
+    async with connect() as db:
+        f = await fetch_one(db, "SELECT * FROM files WHERE id = ?", (file_id,))
+    if not f or not pack.file_path(f).exists() or not f["filename"].lower().endswith(".xlsx"):
+        raise HTTPException(404, "Spreadsheet not found")
+    wb = load_workbook(pack.file_path(f), read_only=True, data_only=True)
+    ws = wb.worksheets[0]
+    rows = [["" if v is None else str(v) for v in r] for r in ws.iter_rows(max_row=limit, values_only=True)]
+    while rows and not any(rows[-1]):
+        rows.pop()
+    return {"sheet": ws.title, "sheets": wb.sheetnames, "rows": rows}
+
+
+class AskSupplier(BaseModel):
+    ingredient_id: int
+    channel: Literal["whatsapp", "telegram", "email"]
+
+
+@router.post("/business/{business_id}/ask-supplier")
+async def ask_supplier(business_id: int, req: AskSupplier):
+    """The owner asks the Supplier Chaser to write to an ingredient's supplier on the channel she picked."""
+    async with connect() as db:
+        ing = await fetch_one(db, """SELECT i.*, s.name AS supplier_name, s.contact_name FROM ingredients i
+                                     LEFT JOIN suppliers s ON s.id = i.supplier_id
+                                     WHERE i.id = ? AND i.business_id = ?""", (req.ingredient_id, business_id))
+        if not ing or not ing["supplier_name"]:
+            raise HTTPException(404, "No supplier on file for this ingredient")
+        how = {"whatsapp": "a WhatsApp", "telegram": "a Telegram message", "email": "an email"}[req.channel]
+        task = await state.create_task(
+            db, business_id, "owner", "supplier_chaser",
+            f"Ask {ing['supplier_name']} for the renewed {ing['name'].lower()} certificate",
+            payload={"channel": req.channel, "supplier_name": ing["supplier_name"], "ingredient_name": ing["name"]},
+            message=f"Please send {how} to {ing['contact_name'] or ing['supplier_name']} for the renewed certificate.")
+    return {"task_id": task["id"]}
+
+
+@router.post("/business/{business_id}/follow-up")
+async def follow_up(business_id: int, key: str = Form(...), files: list[UploadFile] = File(...)):
+    """The owner uploads a fix for one open checklist row (a renewed certificate, a new zone photo).
+    It goes to the agent that owns that row, as a task; any question about the same thing is closed."""
+    kind, _, ref = key.partition(":")
+    async with connect() as db:
+        await _business(db, business_id)
+        if kind == "cert":
+            ing = await fetch_one(db, "SELECT * FROM ingredients WHERE id = ? AND business_id = ?", (int(ref), business_id))
+            if not ing:
+                raise HTTPException(404, "Ingredient not found")
+            saved = await _save_uploads(business_id, files, "suppliers", "certificate", ing["supplier_id"])
+            assignee, title = "certificate_checker", f"Owner uploaded a certificate for {ing['name']}"
+            payload = {"ingredient_id": ing["id"], "ingredient_name": ing["name"]}
+            open_q = "kind = 'question' AND ingredient_id = ?", (ing["id"],)
+        elif kind == "zone" and ref in ZONES:
+            saved = await _save_uploads(business_id, files, "site", "photo")
+            for fid, _ in saved:
+                await update(db, "files", fid, {"zone": ref})
+            assignee, title = "onsite_inspector", f"Owner uploaded a new photo of the {ref} zone"
+            payload = {"zone": ref}
+            open_q = "kind = 'question' AND payload LIKE ?", (f'%"zone": "{ref}"%',)
+        else:
+            raise HTTPException(422, "This row has no upload")
+        payload["file_ids"] = [fid for fid, _ in saved]
+        now = now_iso()
+        await db.execute(f"UPDATE approvals SET status = 'replied', reply_file_id = ?, decided_at = ?, replied_at = ? "
+                         f"WHERE business_id = ? AND status = 'pending' AND {open_q[0]}",
+                         (saved[0][0], now, now, business_id, *open_q[1]))
+        await db.commit()
+        task = await state.create_task(db, business_id, "owner", assignee, title, payload=payload,
+                                       event_label=f"Uploaded {saved[0][1]}"[:120],
+                                       message=f"I uploaded {saved[0][1]}. Can you check it?")
+    return {"task_id": task["id"], "file_ids": payload["file_ids"]}
 
 
 @router.get("/files/{file_id}/content")

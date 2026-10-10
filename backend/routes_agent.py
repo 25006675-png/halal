@@ -312,6 +312,9 @@ class SaveCertificate(BaseModel):
     issuer_recognised: Optional[bool] = None
     legible: bool = True                 # False: the scan can't be read; status becomes 'unclear'
     file_id: Optional[int] = None
+    holder: Optional[str] = None                      # company name printed on the certificate
+    products: Optional[list[str]] = None              # products the certificate covers
+    checks: Optional[list[dict[str, Any]]] = None     # [{key, label, ok, detail, box}]
 
 
 @router.post("/certificates")
@@ -327,7 +330,9 @@ async def save_certificate(req: SaveCertificate):
             "ingredient_id": ing["id"], "issuer": req.issuer or "(unreadable)", "cert_number": req.cert_number,
             "expiry_date": req.expiry_date,
             "issuer_recognised": None if recognised is None else int(recognised),
-            "legible": int(req.legible), "file_id": req.file_id, "created_at": now_iso()})
+            "legible": int(req.legible), "file_id": req.file_id, "holder": req.holder,
+            "products": json.dumps(req.products) if req.products is not None else None,
+            "checks": json.dumps(req.checks) if req.checks is not None else None, "created_at": now_iso()})
         today = await state.get_today(db)
         row = next(r for r in await state.ingredient_rows(db, req.business_id, today) if r["id"] == ing["id"])
     return {"certificate_id": cert_id, "ingredient_id": ing["id"], "ingredient": ing["name"],
@@ -387,6 +392,8 @@ class SaveSiteFinding(BaseModel):
     detail: Optional[str] = None
     question: Optional[str] = None
     photo_file_id: Optional[int] = None
+    checks: Optional[list[dict[str, Any]]] = None     # [{label, ok, detail, box}]
+    suggestion: Optional[str] = None
 
 
 @router.post("/site-findings")
@@ -397,7 +404,9 @@ async def save_site_finding(req: SaveSiteFinding):
         run = await state.active_run(db, req.business_id)
         row = {**req.model_dump(), "run_id": run["id"] if run else None,
                "status": "open", "created_at": now_iso()}
+        row["checks"] = json.dumps(req.checks) if req.checks is not None else None
         row["id"] = await insert(db, "site_findings", row)
+        row["checks"] = req.checks
         zones = {z["zone"]: z["status"] for z in await state.zone_rows(db, req.business_id)}
     return {**row, "zone_status": zones[req.zone]}
 
@@ -419,6 +428,9 @@ class RequestApproval(BaseModel):
     doc_type: Optional[str] = None
     body_ms: Optional[str] = None
     body_en: Optional[str] = None
+    channel: Optional[Literal["whatsapp", "telegram", "email"]] = None   # message: the channel the owner chose
+    options: Optional[list[dict[str, Any]]] = None    # question: answers to pick from [{key, label}]
+    zone: Optional[Zone] = None                        # question: the zone it is about
 
 
 @router.post("/approvals")
@@ -460,9 +472,12 @@ async def request_approval(req: RequestApproval):
             if req.ingredient_id is not None or req.ingredient_name:
                 ingredient = await _ingredient(db, req.business_id, req.ingredient_id, req.ingredient_name)
             values.update(title=req.title, body_en=req.body_en, body_ms=req.body_ms, file_id=req.file_id,
-                          ingredient_id=ingredient["id"] if ingredient else None)
-            dup_sql = "ifnull(ingredient_id, 0) = ? AND ifnull(file_id, 0) = ?"
-            dup_params = (ingredient["id"] if ingredient else 0, req.file_id or 0)
+                          ingredient_id=ingredient["id"] if ingredient else None,
+                          payload=json.dumps(extra) if (extra := {k: v for k, v in
+                                                               {"options": req.options, "zone": req.zone}.items()
+                                                               if v}) else None)
+            dup_sql = "ifnull(ingredient_id, 0) = ? AND ifnull(file_id, 0) = ? AND title = ?"
+            dup_params = (ingredient["id"] if ingredient else 0, req.file_id or 0, req.title)
         else:
             supplier = await _supplier(db, req.business_id, req.supplier_id, req.supplier_name)
             if not supplier:
@@ -473,7 +488,7 @@ async def request_approval(req: RequestApproval):
             if req.ingredient_id is not None or req.ingredient_name:
                 ingredient = await _ingredient(db, req.business_id, req.ingredient_id, req.ingredient_name)
             values.update(supplier_id=supplier["id"], ingredient_id=ingredient["id"] if ingredient else None,
-                          body_ms=req.body_ms, body_en=req.body_en,
+                          body_ms=req.body_ms, body_en=req.body_en, channel=req.channel,
                           title=req.title or f"Message to {supplier['name']}")
             dup_sql = "supplier_id = ? AND ifnull(ingredient_id, 0) = ?"
             dup_params = (supplier["id"], ingredient["id"] if ingredient else 0)

@@ -8,7 +8,8 @@ designed) and writes dashboard/index.html with the live layer added:
   - dashboard/live.js goes inside the template's script, before its routing
     code, so it can extend the template's Dashboard class
   - "Live demo" (#demo) opens LiveDashboard (real backend) instead of the
-    scripted Dashboard; the landing page's preview stays scripted
+    scripted Dashboard; the landing page's preview stays scripted, and
+    /app/?scripted#demo opens the scripted Dashboard (the fixed demo flow)
   - dashboard/live.css goes after the template's styles
 Run it again whenever the template or the live layer changes.
 """
@@ -30,7 +31,8 @@ def main():
         if html.count(marker) != 1:
             raise SystemExit(f"Template changed: expected one {marker!r}")
     html = html.replace(ROUTING, live_js + "\n\n" + ROUTING)
-    html = html.replace(OPEN, "if (!fullDash) fullDash = new LiveDashboard(view, {});")
+    html = html.replace(OPEN, "if (!fullDash) fullDash = new (/[?&]scripted(&|=|$)/.test(location.search) "
+                              "? Dashboard : LiveDashboard)(view, {});")
     html = html.replace("</head>", "<style>\n" + live_css + "</style>\n</head>")
     OUT.write_text(html, encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)} ({len(html) // 1024} KB)")

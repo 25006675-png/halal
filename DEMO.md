@@ -1,5 +1,29 @@
 # HalalReady demo runbook
 
+## Scripted run (no Gemini)
+
+`AGENT_MODE=scripted` (the default) makes the dashboard start `agents/scripted.py` instead of the Gemini
+agents: same backend, same dashboard, fixed answers and timing (about 1:45 of agent work, `DEMO_PACE`).
+The files are in `demo_case/` (regenerate with `scripts/make_demo_case.py`).
+
+1. One terminal: `.venv\Scripts\python -m uvicorn backend.app:app --port 8010`. Don't run `agents.runner`
+   at the same time; it would pick up the same tasks.
+2. Open http://localhost:8010/app/#demo. The small ↻ icon top right starts over (tap twice).
+3. Drop all 16 files from `demo_case/upload/` in at once, then **Analyze**.
+
+| You do | The audience sees |
+|---|---|
+| Analyze | Coordinator opens and sorts the files, reads the lists, plans |
+| Approve the plan (or Ask for a change) | Checker, Inspector and Writer start in parallel |
+| — | Minyak Murni's oil certificate is expired: the run pauses, the expiry field is boxed in red, 4 of 5 checks |
+| Pick WhatsApp, Telegram or Email | Supplier Chaser writes the message in that channel's style |
+| Send | Marked as sent (nothing leaves the laptop in manual mode); the run resumes |
+| — | Store photo: 2 Cap Merpati Hijau tins boxed; the Inspector suggests the fix and asks for a new photo |
+| — | Writer drafts 3 documents; the pack is built; Renewal Watch sets reminders |
+| Application Pack ▸ Readiness checklist | Score and open rows; upload `demo_case/follow_up/` files on the cooking oil and store rows; approve the documents |
+
+## Gemini run
+
 The sample case and what a correct run produces: `sample_case/ANSWER_KEY.md`.
 
 ## Before you go on stage

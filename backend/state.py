@@ -132,13 +132,21 @@ def issuer_recognised(issuer: str) -> bool | None:
 
 # ── statuses ─────────────────────────────────────────────────────────
 
+def _json(text: str | None):
+    try:
+        return json.loads(text) if text else None
+    except ValueError:
+        return None
+
+
 async def ingredient_rows(db, business_id: int, today: date) -> list[dict]:
     """Every ingredient with its supplier, latest certificate and calculated status."""
     rows = await fetch_all(
         db,
         """SELECT i.*, s.name AS supplier_name,
                   c.id AS cert_id, c.issuer, c.cert_number, c.expiry_date,
-                  c.issuer_recognised, c.legible, c.file_id AS cert_file_id
+                  c.issuer_recognised, c.legible, c.file_id AS cert_file_id,
+                  c.holder AS cert_holder, c.products AS cert_products, c.checks AS cert_checks
            FROM ingredients i
            LEFT JOIN suppliers s ON s.id = i.supplier_id
            LEFT JOIN certificates c ON c.id = (
@@ -166,6 +174,8 @@ async def ingredient_rows(db, business_id: int, today: date) -> list[dict]:
         r["days_to_expiry"] = calc.days_to_expiry(r["expiry_date"], today)
         r["issuer_recognised"] = None if r["issuer_recognised"] is None else bool(r["issuer_recognised"])
         r["products"] = products.get(r["id"], [])
+        r["cert_products"] = _json(r["cert_products"])
+        r["cert_checks"] = _json(r["cert_checks"])
     return rows
 
 
@@ -177,7 +187,7 @@ async def zone_rows(db, business_id: int) -> list[dict]:
     )
     result = []
     for zone in ZONES:
-        zf = [f for f in findings if f["zone"] == zone]
+        zf = [{**f, "checks": _json(f.get("checks"))} for f in findings if f["zone"] == zone]
         result.append({"zone": zone, "status": calc.zone_status(zf), "findings": zf})
     return result
 

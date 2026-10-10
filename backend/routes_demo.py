@@ -72,7 +72,10 @@ async def load_sample(reset: bool = False):
     return {"files": len(files)}
 
 
-# ── the agents (agents/runner.py) ───────────────────────────────────
+# ── the agents (agents/runner.py, or agents/scripted.py) ────────────
+
+# AGENT_MODE=scripted (default): the fixed demo run, no Gemini. AGENT_MODE=gemini: the real agents.
+AGENT_MODULE = "agents.runner" if os.getenv("AGENT_MODE", "scripted").lower() == "gemini" else "agents.scripted"
 
 HEARTBEAT = ROOT / ".cache" / "runner.json"
 RUNNER_LOG = ROOT / ".cache" / "runner.log"
@@ -105,7 +108,7 @@ async def agents_start():
     RUNNER_LOG.parent.mkdir(parents=True, exist_ok=True)
     log = open(RUNNER_LOG, "a", encoding="utf-8")
     flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
-    _runner = subprocess.Popen([sys.executable, "-m", "agents.runner"], cwd=ROOT, stdout=log,
+    _runner = subprocess.Popen([sys.executable, "-m", AGENT_MODULE], cwd=ROOT, stdout=log,
                                stderr=subprocess.STDOUT, creationflags=flags)
     return {**runner_status(), "starting": True}
 
