@@ -21,7 +21,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from starlette.datastructures import Headers
 
 from . import state
-from .database import ROOT, UPLOAD_DIR, connect, fetch_all, insert, now_iso, reset_db
+from .database import ROOT, UPLOAD_DIR, connect, fetch_all, fetch_one, insert, now_iso, reset_db
 from .routes_dashboard import answer_question, simulate_reply
 from .seed import seed
 
@@ -49,6 +49,27 @@ async def demo_reset():
     async with connect() as db:
         await state.set_today_override(db, DEMO_DAY)
     return {"reset": True, "today": DEMO_DAY}
+
+
+async def _presses(db) -> int:
+    row = await fetch_one(db, "SELECT value FROM settings WHERE key = 'demo_next'")
+    return int(row["value"]) if row and row["value"] else 0
+
+
+@router.post("/next")
+async def demo_next():
+    """The presenter pressed the right arrow: the scripted run moves on to its next step."""
+    async with connect() as db:
+        n = await _presses(db) + 1
+        await db.execute("INSERT INTO settings (key, value) VALUES ('demo_next', ?) "
+                         "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (str(n),))
+    return {"count": n}
+
+
+@router.get("/next")
+async def demo_presses():
+    async with connect() as db:
+        return {"count": await _presses(db)}
 
 
 @router.post("/load-sample")

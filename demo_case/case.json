@@ -572,51 +572,24 @@
    "title": "Raw material store",
    "checks": [
     {
-     "label": "Every brand on the shelf is on your ingredient list",
-     "ok": false,
-     "detail": "2 tins of CAP MERPATI HIJAU cooking oil, top shelf on the right. Your ingredient list has MURNI oil only.",
-     "box": [
-      0.665,
-      0.205,
-      0.885,
-      0.43
-     ]
+     "label": "Items labelled",
+     "state": "ok",
+     "detail": "Every sack, tub and tin is labelled."
     },
     {
-     "label": "Raw materials kept off the floor",
-     "ok": true,
+     "label": "Stored off the floor",
+     "state": "ok",
      "detail": "Everything is on the rack or the pallet."
-    },
-    {
-     "label": "No non-halal items stored with ingredients",
-     "ok": true,
-     "detail": "None seen."
-    },
-    {
-     "label": "Containers closed and labelled",
-     "ok": true,
-     "detail": "Sacks, tubs and tins are labelled."
     }
-   ],
-   "suggestion": "Move the 2 Cap Merpati Hijau tins out of the store, or add that oil to your ingredient list with its halal certificate. Then upload a new photo of the same shelf."
+   ]
   },
   "processing": {
    "title": "Processing area",
    "checks": [
     {
-     "label": "No non-halal items or utensils",
-     "ok": true,
-     "detail": "Only the sambal ingredients are out."
-    },
-    {
-     "label": "Hygiene sign displayed",
-     "ok": true,
-     "detail": "Hairnet, apron and gloves sign on the wall."
-    },
-    {
-     "label": "Work surfaces clean",
-     "ok": true,
-     "detail": "Clean steel tables."
+     "label": "Clean surfaces",
+     "state": "ok",
+     "detail": "Clean steel tables, hygiene sign on the wall."
     }
    ]
   },
@@ -624,19 +597,9 @@
    "title": "Packing area",
    "checks": [
     {
-     "label": "Labels and batch codes checked",
-     "ok": true,
-     "detail": "'Check label & batch code' sign above the table."
-    },
-    {
-     "label": "Jars closed after filling",
-     "ok": true,
-     "detail": "All 10 jars have lids."
-    },
-    {
-     "label": "No foreign items on the packing table",
-     "ok": true,
-     "detail": "Only Mak Teh jars."
+     "label": "Jars sealed and coded",
+     "state": "ok",
+     "detail": "All 10 jars have lids; batch code check sign above the table."
     }
    ]
   },
@@ -644,14 +607,34 @@
    "title": "Cleaning area",
    "checks": [
     {
-     "label": "Chemicals in a closed cabinet, away from food",
-     "ok": true,
-     "detail": "Red cabinet marked 'Cleaning chemicals only'."
+     "label": "Detergent next to food",
+     "state": "warn",
+     "ask": "Please move it",
+     "detail": "A bottle of dishwashing detergent stands next to the tub of chilli paste on the counter.",
+     "box": [
+      0.18,
+      0.25,
+      0.255,
+      0.54
+     ]
     },
     {
-     "label": "Hand soap at the sink",
-     "ok": true,
-     "detail": "Soap dispenser next to the sink."
+     "label": "Chemicals cabinet closed",
+     "state": "ok",
+     "detail": "Red cabinet marked 'Cleaning chemicals only'."
+    }
+   ],
+   "suggestion": "Please move the detergent away from the food, into the chemicals cabinet. Then send a new photo of the counter.",
+   "after": [
+    {
+     "label": "Detergent stored away from food",
+     "state": "ok",
+     "detail": "Nothing but food items on the counter."
+    },
+    {
+     "label": "Chemicals cabinet closed",
+     "state": "ok",
+     "detail": "Red cabinet marked 'Cleaning chemicals only'."
     }
    ]
   },
@@ -659,14 +642,9 @@
    "title": "Waste area",
    "checks": [
     {
-     "label": "Bins have lids and are closed",
-     "ok": true,
-     "detail": "All 3 bins are closed."
-    },
-    {
-     "label": "Waste kept outside production",
-     "ok": true,
-     "detail": "Behind the back door."
+     "label": "Bins closed",
+     "state": "ok",
+     "detail": "All 3 bins have their lids on, outside the back door."
     }
    ]
   }

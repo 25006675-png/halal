@@ -196,7 +196,7 @@ async def get_case(ctx: Ctx):
         "business": case["business"]["name"],
         "today": case["today"],
         "readiness": f"{r['score']}% ({r['ingredients_covered']}/{r['ingredients_total']} ingredients covered, "
-                     f"{r['zones_clear']}/5 zones clear, {r['documents_approved']}/3 documents approved)",
+                     f"{r['zones_clear']}/{r['zones_total']} zones clear, {r['documents_approved']}/3 documents approved)",
         "products": [p["name"] for p in case["products"]],
         "suppliers": [{k: s[k] for k in ("name", "contact_name", "phone")} for s in case["suppliers"]],
         "ingredients": [{"name": i["name"], "brand": i["brand"], "supplier": i["supplier_name"],

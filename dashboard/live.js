@@ -1,7 +1,7 @@
 /* =====================================================================
    HalalReady live: the template's Dashboard, driven by the real backend.
 
-   scripts/build_dashboard.py injects this file into GreenHalalReady.html's
+   scripts/build_dashboard.py injects this file into index.html's
    script, just before the routing code, so it can use the template's own
    helpers (h, icon, beam, ...) and extend its Dashboard class. The landing
    page and its scripted preview stay as designed; "Live demo" (#demo) opens
@@ -61,11 +61,15 @@ function marked(src, boxes, alt) {
   (boxes || []).forEach(b => { if (b && b.box) wrap.append(h('span', { class: 'hl-box ' + (b.tone || 'bad'), 'data-k': b.key || '', style: { left: b.box[0] * 100 + '%', top: b.box[1] * 100 + '%', width: (b.box[2] - b.box[0]) * 100 + '%', height: (b.box[3] - b.box[1]) * 100 + '%' } })); });
   return wrap;
 }
-/* the checklist an agent ran: a tick or a cross, what was checked, what it found */
+const stateOf = c => c.state || (c.ok ? 'ok' : 'bad');
+const isOk = c => stateOf(c) === 'ok';
+const STATE_ICON = { ok: 'check', bad: 'x', warn: 'alert', missing: null };
+/* the checklist an agent ran: what was checked, what it found, and what to do */
 function checkList(checks, img) {
   return h('ul', { class: 'cklist' }, ...(checks || []).map(c => {
-    const li = h('li', { class: c.ok ? 'ok' : 'bad' }, h('span', { class: 'ck-i', html: icon(c.ok ? 'check' : 'x') }),
-      h('div', null, h('b', null, c.label), c.detail ? h('span', null, c.detail) : null));
+    const st = stateOf(c);
+    const li = h('li', { class: st }, h('span', { class: 'ck-i', html: STATE_ICON[st] ? icon(STATE_ICON[st]) : '' }),
+      h('div', null, h('b', null, c.label), c.detail ? h('span', null, c.detail) : null, c.ask ? h('q', null, c.ask) : null));
     if (img && c.key && c.box) {
       li.addEventListener('mouseenter', () => $$('.hl-box', img).forEach(b => b.classList.toggle('on', b.dataset.k === c.key)));
       li.addEventListener('mouseleave', () => $$('.hl-box', img).forEach(b => b.classList.remove('on')));
@@ -88,8 +92,41 @@ function fileView(f) {
   }).catch(() => { box.innerHTML = '<p class="evd-none">This file could not be opened.</p>'; });
   return box;
 }
+/* everything that was dropped: files, and every file inside dropped folders (sub-folders too) */
+async function filesFromDrop(dt) {
+  const entries = Array.from(dt.items || []).map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);   /* read before any await */
+  if (!entries.length) return Array.from(dt.files || []);
+  const out = [];
+  const walk = async entry => {
+    if (entry.isFile) { out.push(await new Promise((res, rej) => entry.file(res, rej))); return; }
+    if (!entry.isDirectory) return;
+    const reader = entry.createReader();
+    for (;;) {
+      const batch = await new Promise((res, rej) => reader.readEntries(res, rej));   /* comes in batches of up to 100 */
+      if (!batch.length) break;
+      for (const e of batch) await walk(e);
+    }
+  };
+  for (const e of entries) await walk(e);
+  return out;
+}
 const fileIcon = name => isSheet(name) ? 'sheet' : /\.(jpe?g|png|heic|webp)$/i.test(name || '') ? 'eye' : 'doc';
 const ZONE_LABEL = { store: 'Raw material store', processing: 'Processing area', packing: 'Packing area', cleaning: 'Cleaning area', waste: 'Waste area' };
+const zoneChecks = z => ((z.findings || []).filter(f => f.checks).pop() || {}).checks || [];
+const ZMARK = { ok: '✓', warn: '⚠', missing: '○', bad: '✗' };
+function zoneLine(c) {
+  const st = stateOf(c);
+  return h('span', { class: 'zc ' + st }, h('i', null, ZMARK[st]), ' ' + c.label.charAt(0).toLowerCase() + c.label.slice(1),
+    c.ask ? h('q', null, (st === 'missing' ? ' → ' : ' ') + '“' + c.ask + '”') : null);
+}
+function zoneSummary(zones, onPick) {
+  return h('ul', { class: 'zsum' }, ...zones.filter(z => z.status !== 'unchecked').map(z => {
+    const cs = zoneChecks(z), st = cs.some(c => stateOf(c) === 'missing') ? 'missing' : cs.some(c => !isOk(c)) ? 'warn' : 'ok';
+    const li = h('li', { class: st }, h('b', null, ZONE_LABEL[z.zone] + ':'), ...cs.map(zoneLine));
+    if (onPick) { li.classList.add('pick'); li.addEventListener('click', () => onPick(z)); }
+    return li;
+  }));
+}
 const ST_TEXT = { valid: 'Valid', expiring: 'Expiring soon', expired: 'Expired', missing: 'No certificate', unclear: 'Can’t read the scan', unrecognised_issuer: 'Issuer not recognised' };
 const ST_RESULT = { valid: 'ok', expiring: 'warn', unclear: 'warn', expired: 'bad', missing: 'bad', unrecognised_issuer: 'bad' };
 const LIVE_FILES = [
@@ -379,7 +416,7 @@ class LiveDashboard extends Dashboard {
     this.scoreRing.setAttribute('stroke-dashoffset', (this.scoreRC * (1 - r.score / 100)).toFixed(1));
     this.scoreBox.classList.toggle('good', r.score >= 80);
     const t = this.scoreBox.querySelector('.score-t');
-    if (t) { t.children[1].textContent = r.ingredients_covered + '/' + r.ingredients_total + ' ingredients covered'; t.children[2].textContent = r.zones_clear + '/5 zones clear · ' + r.documents_approved + '/3 documents approved'; }
+    if (t) { t.children[1].textContent = r.ingredients_covered + '/' + r.ingredients_total + ' ingredients covered'; t.children[2].textContent = r.zones_clear + '/' + r.zones_total + ' zones clear · ' + r.documents_approved + '/3 documents approved'; }
     this.pkHeadScore.textContent = String(s.pack.items_ready);
     const total = s.tasks.length, doneN = s.tasks.filter(x => x.status === 'done').length;
     this.runBar.style.width = (total ? Math.round(doneN / total * 100) : 0) + '%';
@@ -463,6 +500,8 @@ class LiveDashboard extends Dashboard {
   }
   liveCard(n) {
     const card = h('section', { class: 'ap', 'aria-label': n.title });
+    const append = card.append.bind(card);
+    card.append = (...xs) => append(...xs.flat().filter(x => x != null && x !== false));   /* skip parts a card doesn't have */
     const who = AGENTS[AG[n.requested_by]] || AGENTS.coord;
     const extra = parseJSON(n.payload) || {};
     const head = (title, ic) => h('div', { class: 'ap-h' }, h('span', { class: 'ap-ico', 'aria-hidden': 'true', html: icon(ic || 'hand') }),
@@ -524,7 +563,7 @@ class LiveDashboard extends Dashboard {
     } else if (n.kind === 'question' && extra.options) {
       /* a decision the run waits for */
       const ing = this.snap.ingredients.find(i => i.id === n.ingredient_id);
-      const failed = ((ing && ing.cert_checks) || []).filter(c => !c.ok);
+      const failed = ((ing && ing.cert_checks) || []).filter(c => !isOk(c));
       const thumb = n.file_id ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box, key: c.key })), n.title) : null;
       if (thumb) { thumb.classList.add('ap-shot'); thumb.addEventListener('click', () => this.openEvidence('ing:' + n.ingredient_id)); }
       card.classList.add('ap-block');
@@ -536,21 +575,23 @@ class LiveDashboard extends Dashboard {
     } else if (n.kind === 'question') {
       const zone = extra.zone && this.snap.site.zones.find(z => z.zone === extra.zone);
       const finding = zone && zone.findings.find(f => f.status === 'open' && f.severity !== 'ok');
-      const failed = ((finding && finding.checks) || []).filter(c => !c.ok);
+      const failed = ((finding && finding.checks) || []).filter(c => !isOk(c));
       const fileIn = h('input', { type: 'file', accept: zone ? 'image/*' : 'image/*,application/pdf,.xlsx,.docx', class: 'sr-only' });
-      const picked = h('span', { class: 'fn' }, zone ? 'Upload the new photo' : 'Attach a file');
-      fileIn.addEventListener('change', () => { picked.textContent = fileIn.files[0] ? fileIn.files[0].name : 'Upload the new photo'; });
-      const shot = n.file_id ? (zone ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box }))) : h('img', { class: 'ap-thumb', src: fileUrl(n.file_id), alt: '' })) : null;
+      const ask = zone && !n.file_id ? 'Upload a photo' : 'Upload the new photo';
+      const picked = h('span', { class: 'fn' }, zone ? ask : 'Attach a file');
+      fileIn.addEventListener('change', () => { picked.textContent = fileIn.files[0] ? fileIn.files[0].name : ask; });
+      const shot = n.file_id ? (zone ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box, tone: stateOf(c) === 'warn' ? 'warn' : 'bad' }))) : h('img', { class: 'ap-thumb', src: fileUrl(n.file_id), alt: '' })) : null;
       if (shot) { shot.classList.add(zone ? 'ap-shot' : 'ap-thumb'); shot.addEventListener('click', () => zone ? this.openEvidence('zone:' + zone.zone) : this.openFileView(n.file_id, n.title)); }
-      card.append(head(zone ? 'Fix suggested' : 'Needs your answer', zone ? 'eye' : 'hand'),
+      card.append(head(zone ? (n.file_id ? 'Fix suggested' : 'Photo missing') : 'Needs your answer', zone ? 'eye' : 'hand'),
         h('p', { class: 'ap-why' }, h('b', null, n.title)),
         zone ? shot : h('div', { class: 'ap-q' }, shot, h('p', { class: 'ap-why' }, n.body_en || '')),
         zone && failed.length ? checkList(failed) : null,
         zone ? h('p', { class: 'ap-why ap-tip', html: icon('sparkle') + '<span>' + esc(n.body_en || '') + '</span>' }) : null,
+        zone ? h('details', { class: 'zsum-more' }, h('summary', null, 'All zones'), zoneSummary(this.snap.site.zones)) : null,
         h('label', { class: 'dropbar ap-drop' }, h('span', { class: 'dropbar-ico', html: icon('upload') }), picked, fileIn),
         h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink mb', type: 'button', onclick: () => {
           if (!fileIn.files[0]) { this.toast(zone ? 'Choose the new photo first.' : 'Attach a file first.'); return; }
-          const fd = new FormData(); fd.append('files', fileIn.files[0]); fd.append('text', 'New photo after the fix');
+          const fd = new FormData(); fd.append('files', fileIn.files[0]); fd.append('text', n.file_id ? 'New photo after the fix' : 'Here is the photo');
           liveApi('/approvals/' + n.id + '/answer', { method: 'POST', body: fd }).then(() => { doneHead('Photo sent'); this.toast('Sent to the ' + who.name + '.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
         } }, 'Send to the ' + who.name)));
     }
@@ -606,7 +647,7 @@ class LiveDashboard extends Dashboard {
     const s = this.snap;
     const sup = s.suppliers.find(x => x.id === i.supplier_id) || {};
     const who = sup.contact_name || i.supplier_name || 'the supplier';
-    const failed = (i.cert_checks || []).filter(c => !c.ok).map(c => c.label);
+    const failed = (i.cert_checks || []).filter(c => !isOk(c)).map(c => c.label);
     const q = s.feed.needs_you.find(n => n.kind === 'question' && n.ingredient_id === i.id && (parseJSON(n.payload) || {}).options);
     const m = s.approvals.find(a => a.kind === 'message' && a.ingredient_id === i.id);
     const upload = this.uploadBtn('cert:' + i.id, i.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', 'Certificate Checker');
@@ -632,7 +673,7 @@ class LiveDashboard extends Dashboard {
   zoneStep(z) {
     const f = z.findings.find(x => x.status === 'open' && x.severity !== 'ok') || {};
     return { title: ZONE_LABEL[z.zone] + ': ' + (f.title || 'fix needed').toLowerCase(), text: f.suggestion || 'Fix it, then upload a new photo of the zone.',
-      actions: [this.uploadBtn('zone:' + z.zone, 'Upload new photo', 'On-site Inspector'), h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, 'See where')] };
+      actions: [this.uploadBtn('zone:' + z.zone, zoneChecks(z).some(c => stateOf(c) === 'missing') ? 'Upload a photo' : 'Upload new photo', 'On-site Inspector'), h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, 'See where')] };
   }
   nextSteps(id) {
     const s = this.snap; if (!s) return [];
@@ -720,12 +761,18 @@ class LiveDashboard extends Dashboard {
     const p = this.panes.input;
     /* tiles and lists are rebuilt from the backend in syncInput() */
     this.inTiles = $('.tiles', p);
+    /* everything the owner dropped in, as a pile of small documents */
+    this.pileEl = h('div', { class: 'pile', hidden: true });
+    this.inTiles.before(this.pileEl);
     this.inFilesHead = $$('.in-sec .mono-l.ok', p)[0];
     this.inFilesChip = $('.cmp-chip.ok', p);
     const drop = $('.dropbar', p), fileIn = $('input[type=file]', drop);
     const upload = files => {
-      const fd = new FormData(); Array.from(files || []).forEach(f => fd.append('files', f));
-      if (!fd.has('files')) return;
+      /* a whole folder comes in at once; system files (.DS_Store, Thumbs.db, ~$ lock files) stay out */
+      const keep = Array.from(files || []).filter(f => f.size && !/^(\.|~\$)|^(thumbs\.db|desktop\.ini)$/i.test(f.name))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      const fd = new FormData(); keep.forEach(f => fd.append('files', f));
+      if (!fd.has('files')) { this.toast('No files found in what you dropped.'); return; }
       liveApi('/business/' + LIVE_BIZ + '/files', { method: 'POST', body: fd }).then(r => { this.toast(r.files.length + (r.files.length === 1 ? ' file' : ' files') + ' added.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
     };
     void fileIn;
@@ -733,14 +780,19 @@ class LiveDashboard extends Dashboard {
     const fi2 = $('input[type=file]', d2); fi2.addEventListener('change', () => { upload(fi2.files); fi2.value = ''; });
     d2.addEventListener('dragover', e => { e.preventDefault(); d2.classList.add('over'); });
     d2.addEventListener('dragleave', () => d2.classList.remove('over'));
-    d2.addEventListener('drop', e => { e.preventDefault(); d2.classList.remove('over'); upload(e.dataTransfer.files); });
+    d2.addEventListener('drop', e => { e.preventDefault(); d2.classList.remove('over'); filesFromDrop(e.dataTransfer).then(upload).catch(err => this.toast(err.message)); });
+    const head = d2.querySelector('b'); if (head) { head.textContent = 'Drop your files or a whole folder here'; head.nextSibling && (head.nextSibling.textContent = ' or browse'); }
+    /* or pick a folder in the file dialog */
+    const folderIn = h('input', { type: 'file', multiple: true, webkitdirectory: true, class: 'sr-only' });
+    folderIn.addEventListener('change', () => { upload(folderIn.files); folderIn.value = ''; });
+    d2.after(h('label', { class: 'folder-pick' }, icon('folder'), 'or choose a folder', folderIn));
     $('.in-note', p)?.remove();
     $('.own-list', p)?.remove();
     this.inProducts = $$('.cmp-in', p)[1];
     if (this.inProducts) this.inProducts.value = '2 sambal products';
     $$('.sugg-b', p).forEach((b, i) => { const t = ['Prepare Mak Teh Sambal’s halal certification application.', 'Check every supplier certificate before I renew.', 'Check my premises photos for halal risks.'][i]; if (t) { b.textContent = t; b.onclick = () => { this.inPrompt.value = t; this.inPrompt.focus(); }; } });
     [['Plan', 'The Coordinator reads your files'], ['Approve', 'You approve the plan'], ['Work', 'Three agents in parallel'], ['Decide', 'You choose what to do about problems'], ['Output', 'Readiness score and checklist']]
-      .forEach(([b, t], i) => { const li = $$('.hsteps li', p)[i]; if (li) { li.querySelector('b').textContent = b; li.querySelector('span:last-child').textContent = t; } });
+      .forEach(([b, t], i) => { const li = $$('.hsteps li', p)[i]; if (li) { li.querySelector(':scope > b').textContent = b; li.querySelector(':scope > span:last-child').textContent = t; } });
     this.startBtn.querySelector('span').textContent = 'Analyze';
   }
   trayOf(f) {
@@ -751,8 +803,32 @@ class LiveDashboard extends Dashboard {
     if (/cert|sijil|invoice|invois|supplier|pembekal/.test(n)) return 'suppliers';
     return 'company';
   }
+  renderPile(files) {
+    const el = this.pileEl;
+    el.innerHTML = '';
+    el.hidden = !files.length;
+    if (!files.length) return;
+    const ext = f => (f.filename.split('.').pop() || '').toLowerCase();
+    const certs = files.filter(f => /cert|sijil/i.test(f.filename)).length;
+    const photos = files.filter(f => /^(jpe?g|png|heic|webp)$/.test(ext(f)) && !/cert|sijil/i.test(f.filename)).length;
+    const sheets = files.filter(f => /^xlsx?$/.test(ext(f))).length, pdfs = files.filter(f => ext(f) === 'pdf').length;
+    const parts = [[certs, 'certificate'], [sheets, 'spreadsheet'], [pdfs, 'PDF'], [photos, 'photo']].filter(([n]) => n).map(([n, w]) => n + ' ' + w + (n > 1 ? 's' : ''));
+    const desk = h('div', { class: 'pile-desk' });
+    files.forEach((f, i) => {
+      const card = h('button', { class: 'pile-doc', type: 'button', title: f.filename, 'aria-label': 'Open ' + f.filename,
+        style: { '--r': (((f.id * 37) % 9) - 4) + 'deg', '--d': (i * 40) + 'ms' }, onclick: () => this.openFileView(f.id) });
+      const img = h('img', { src: '/files/' + f.id + '/thumb', alt: '', loading: 'lazy' });
+      img.addEventListener('error', () => img.replaceWith(h('span', { class: 'pile-ico', html: icon(fileIcon(f.filename)) })));
+      card.append(img, h('span', { class: 'pile-ext ext-' + ext(f) }, ext(f).toUpperCase()),
+        h('span', { class: 'pile-n' }, f.filename.replace(/^\d+_/, '').replace(/\.\w+$/, '').replace(/_/g, ' ')));
+      desk.append(card);
+    });
+    el.append(h('div', { class: 'pile-h' }, h('b', null, files.length + ' documents to read, check and file'), h('span', null, parts.join(' · '))), desk);
+  }
   syncInput() {
     const s = this.snap; if (!s || !this.inTiles) return;
+    const ids = s.files.map(f => f.id + f.filename).join('|');
+    if (ids !== this.pileIds) { this.pileIds = ids; this.renderPile(s.files.filter(f => f.source !== 'supplier_reply')); }
     const groups = { suppliers: [], products: [], site: [], company: [] };
     s.files.forEach(f => groups[this.trayOf(f)].push(f));
     const TILES = [['suppliers', 'cert', 'Supplier files', 'Certificates, supplier list, invoices', 'ink'], ['products', 'list', 'Products', 'Recipes and labels', 'ok'], ['site', 'eye', 'Site photos', 'One photo per zone', 'human'], ['company', 'doc', 'Company documents', 'SSM, profile, organisation chart', 'attn']];
@@ -764,7 +840,7 @@ class LiveDashboard extends Dashboard {
       const thumbs = h('span', { class: 'tile-thumbs', 'aria-hidden': 'true' }, ...Array.from({ length: Math.min(3, n) }, () => h('i')));
       const t = h('button', { class: 'tile t-' + tone, type: 'button', 'aria-expanded': open === key ? 'true' : 'false' },
         h('span', { class: 'tile-ico', html: icon(ic) }), thumbs, h('b', null, title), h('span', { class: 'tile-sub' }, sub),
-        h('span', { class: 'tile-foot' }, h('span', { class: 'tile-n tnum' }, String(n)), h('span', null, n === 1 ? 'file' : 'files'),
+        h('span', { class: 'tile-foot' }, h('span', { class: 'tile-types' }, ...[...new Set(fs.map(f => (f.filename.split('.').pop() || '').toLowerCase()))].map(e => h('span', { class: 'tile-ext ext-' + e }, e.toUpperCase()))),
           h('span', { class: 'tile-ok', html: n ? icon('done') + (fs.every(f => f.category) ? 'Sorted' : 'In the pile') : '' })));
       t.addEventListener('click', () => {
         if (this.openTile === key) { this.openTile = null; list.hidden = true; this.syncInput(); return; }
@@ -808,7 +884,7 @@ class LiveDashboard extends Dashboard {
         const certFile = i.cert_file_id && s.files.find(f => f.id === i.cert_file_id);
         html.push(head('cert', i.name, (i.supplier_name || 'No supplier on file') + (i.source === 'found_on_site' ? ', found on site' : '')),
           boxes(['Result', ST_TEXT[i.status] || i.status, ST_RESULT[i.status] === 'ok' ? 'ok' : ST_RESULT[i.status] === 'warn' ? 'warn' : 'bad'], ['Valid until', i.expiry_date ? niceDate(i.expiry_date) : '—']),
-          i.cert_checks ? h('span', { class: 'mono-l sec' }, (i.cert_checks.filter(c => c.ok).length) + ' of ' + i.cert_checks.length + ' checks passed') : null,
+          i.cert_checks ? h('span', { class: 'mono-l sec' }, (i.cert_checks.filter(isOk).length) + ' of ' + i.cert_checks.length + ' checks passed') : null,
           i.cert_checks ? checkList(i.cert_checks) : null,
           h('span', { class: 'mono-l sec' }, 'Certificate'),
           grid([['Brand', i.brand || '—'], ['Certificate no.', i.cert_number || '—'], ['Issued by', i.status === 'unclear' ? 'Unreadable' : (i.issuer || '—'), true], ['Used in', (i.products || []).join(', ') || '—', true], ['Tool', 'check_certificate'], ['File', certFile ? certFile.filename : 'None on file', true]]));
@@ -818,7 +894,7 @@ class LiveDashboard extends Dashboard {
         const z = s.site.zones.find(x => x.zone === m.zone.zone) || m.zone;
         const last = z.findings.filter(f => f.checks).pop();
         const zc = (last && last.checks) || [];
-        html.push(head('eye', ZONE_LABEL[z.zone], 'Zone photo, checked by the On-site Inspector'), boxes(['Result', bad ? 'Fix needed' : 'Clear', bad ? 'bad' : 'ok'], ['Checks', zc.filter(c => c.ok).length + ' / ' + zc.length]),
+        html.push(head('eye', ZONE_LABEL[z.zone], 'Zone photo, checked by the On-site Inspector'), boxes(['Result', bad ? 'Fix needed' : 'Clear', bad ? 'bad' : 'ok'], ['Checks', zc.filter(isOk).length + ' / ' + zc.length]),
           checkList(zc), bad ? h('span', { class: 'mono-l sec' }, 'Proposed next step') : null, bad ? this.stepBox(this.zoneStep(z)) : null,
           h('button', { class: 'btn btn-ink btn-sm dbtn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, icon('eye'), 'See the photo'));
       } else if (m.kind === 'doc' || m.kind === 'review') {
@@ -842,7 +918,7 @@ class LiveDashboard extends Dashboard {
       const backend = AG_BACK[id];
       const mine = backend ? s.tasks.filter(t => t.assignee === backend) : [];
       const checked = s.tasks.some(t => t.assignee === 'certificate_checker' && t.status === 'done') ? s.ingredients.length : s.ingredients.filter(i => i.cert_id).length;
-      const prog = { checker: [checked, s.ingredients.length], inspector: [s.site.zones.filter(z => z.status !== 'unchecked').length, 5], writer: [s.documents.length, 3], auditor: [s.documents.filter(d => d.status !== 'draft').length, 3], pack: [this.filesReady, 6] }[id] || (mine.length ? [mine.filter(t => t.status === 'done').length, mine.length] : null);
+      const prog = { checker: [checked, s.ingredients.length], inspector: [s.site.zones.filter(z => z.status !== 'unchecked').length, s.site.zones.length], writer: [s.documents.length, 3], auditor: [s.documents.filter(d => d.status !== 'draft').length, 3], pack: [this.filesReady, 6] }[id] || (mine.length ? [mine.filter(t => t.status === 'done').length, mine.length] : null);
       const firstEv = this.log.find(e => e.agent === id);
       const recent = this.log.filter(e => e.agent === id).slice(-3).reverse();
       html = [
@@ -850,6 +926,7 @@ class LiveDashboard extends Dashboard {
           h('div', null, h('b', null, a.human ? 'Mak Teh (you)' : a.name), h('span', { class: 'dsub mono' }, a.human ? 'Owner, approves the plan and messages' : 'workbuddy/sub-agent/' + (AGENT_SLUG[id] || id)))),
         boxes(['Status', STATE_LABEL[st], st === 'waiting' ? 'warn' : st === 'flag' ? 'bad' : st === 'done' ? 'ok' : st === 'working' ? 'ink' : ''], ['Progress', prog ? prog[0] + ' / ' + prog[1] : '—']),
         h('p', { class: 'dnow' }, this.status[id] || ''),
+        ...(id === 'inspector' && s.site.zones.some(z => z.status !== 'unchecked') ? [h('span', { class: 'mono-l sec' }, 'Zone by zone'), zoneSummary(s.site.zones, z => this.openEvidence('zone:' + z.zone))] : []),
         ...(steps => steps.length ? [h('span', { class: 'mono-l sec' }, 'Proposed next step'), ...steps.map(st => this.stepBox(st))] : [])(this.nextSteps(id)),
         h('span', { class: 'mono-l sec' }, 'Run details'),
         grid([['Tools', (LIVE_TOOLS[id] || (id === 'owner' ? ['approvals in the dashboard'] : id === 'pack' ? ['assemble_pack'] : [])).join(', '), true],
@@ -892,11 +969,11 @@ class LiveDashboard extends Dashboard {
       const i = s.ingredients.find(x => String(x.id) === ref); if (!i) return;
       const f = i.cert_file_id && s.files.find(x => x.id === i.cert_file_id);
       checks = i.cert_checks || [];
-      const failed = checks.filter(c => !c.ok);
+      const failed = checks.filter(c => !isOk(c));
       kicker = ST_RESULT[i.status] === 'ok' ? 'Checked' : 'Problem';
       title = i.name + ': ' + (ST_TEXT[i.status] || i.status).toLowerCase();
       if (f) {
-        src = marked(fileUrl(f.id), checks.map(c => ({ box: c.box, key: c.key, tone: c.ok ? 'ok' : 'bad' })), f.filename);
+        src = marked(fileUrl(f.id), checks.map(c => ({ box: c.box, key: c.key, tone: isOk(c) ? 'ok' : 'bad' })), f.filename);
         src.classList.add(failed.length ? 'show-bad' : 'show-none');
         caption = f.filename + (failed.length ? ', the field in red' : '');
       }
@@ -910,9 +987,11 @@ class LiveDashboard extends Dashboard {
       checks = last.checks || [];
       const photo = (last.photo_file_id && s.files.find(f => f.id === last.photo_file_id)) || s.files.find(f => f.zone === ref);
       kicker = z.status === 'issue' ? 'Problem' : 'Checked';
-      title = ZONE_LABEL[ref] + (z.status === 'issue' ? ': fix needed' : ': all checks passed');
-      if (photo) {
-        src = marked(fileUrl(photo.id), checks.filter(c => !c.ok).map(c => ({ box: c.box })), photo.filename);
+      const missing = checks.some(c => stateOf(c) === 'missing');
+      title = ZONE_LABEL[ref] + (missing ? ': no photo yet' : z.status === 'issue' ? ': fix needed' : ': all checks passed');
+      if (missing) src = h('p', { class: 'evd-none' }, '○  No photo of the ' + ZONE_LABEL[ref].toLowerCase() + ' yet.');
+      else if (photo) {
+        src = marked(fileUrl(photo.id), checks.filter(c => !isOk(c)).map(c => ({ box: c.box, tone: stateOf(c) === 'warn' ? 'warn' : 'bad' })), photo.filename);
         caption = photo.filename;
       }
       row('Checked by', 'On-site Inspector <span class="tool">check_zone</span>');
@@ -921,7 +1000,7 @@ class LiveDashboard extends Dashboard {
     } else return;
     wrap.append(h('div', { class: 'evd-src' }, src || h('p', { class: 'evd-none' }, 'No file on record')),
       caption ? h('p', { class: 'evd-cap', html: icon('eye') + '<span>' + esc(caption) + '</span>' }) : null,
-      checks.length ? h('span', { class: 'mono-l sec' }, checks.filter(c => c.ok).length + ' of ' + checks.length + ' checks passed') : null,
+      checks.length ? h('span', { class: 'mono-l sec' }, checks.filter(isOk).length + ' of ' + checks.length + ' checks passed') : null,
       checks.length ? checkList(checks, src) : null, rows);
     this.openDrawer(kicker, title, wrap);
   }
@@ -939,7 +1018,8 @@ class LiveDashboard extends Dashboard {
     this.pkDownload = h('a', { class: 'btn btn-line btn-sm fb-dl', href: '/business/' + LIVE_BIZ + '/pack/download', hidden: true }, icon('folder'), 'Download the pack');
     const side = h('aside', { class: 'fb-side' },
       h('div', { class: 'fb-root' }, h('span', { class: 'fb-chev', html: icon('back') }), h('span', { class: 'fb-fold', html: icon('folder') }), h('span', null, 'MakTehSambal_ApplicationPack')),
-      this.pkList, this.pkTodoBox, this.pkDownload,
+      this.pkScore = h('button', { class: 'pk-score', type: 'button', hidden: true, onclick: () => this.showFile('chk') }),
+      this.pkScore, this.pkList, this.pkTodoBox, this.pkDownload,
       h('p', { class: 'fb-note' }, 'WorkBuddy writes these files to your shared folder. You submit on MYeHALAL yourself.'));
     this.pkCrumb = h('span', { class: 'fb-crumb-f' }, '');
     const head = h('div', { class: 'fb-bar' },
@@ -982,11 +1062,19 @@ class LiveDashboard extends Dashboard {
   }
   syncPackFiles() {
     if (!this.snap) return;
-    LIVE_FILES.forEach(f => { const b = this.fileBtns[f.id], ok = this.fileReady(f.id); b.dataset.state = ok ? 'ready' : 'pending'; b.querySelector('.pk-st').textContent = ok ? 'Ready' : 'Waiting'; });
+    LIVE_FILES.forEach(f => { const b = this.fileBtns[f.id], ok = this.fileReady(f.id), st = ok ? this.fileStatus(f.id) : ['Waiting', 'wait']; b.dataset.state = ok ? 'ready' : 'pending'; const el = b.querySelector('.pk-st'); el.textContent = st[0]; el.dataset.tone = st[1]; });
     const pk = this.snap.pack, cb = this.fileBtns.chk;
     Object.keys(this.followUps || {}).forEach(k => { const it = pk.sections.flatMap(x => x.items).find(x => x.key === k); if (it && it.status === 'ready') delete this.followUps[k]; });
     cb.dataset.state = pk.latest_pack ? 'ready' : 'pending';
-    cb.querySelector('.pk-st').textContent = pk.latest_pack ? Math.round(this.snap.overview.readiness.score) + '%' : 'Waiting';
+    const r = this.snap.overview.readiness, open = pk.items_total - pk.items_ready;
+    cb.querySelector('.pk-st').textContent = pk.latest_pack ? (open ? open + ' open' : 'All ready') : 'Waiting';
+    cb.querySelector('.pk-st').dataset.tone = pk.latest_pack ? (open ? 'attn' : 'ok') : 'wait';
+    this.pkScore.hidden = !pk.latest_pack;
+    if (pk.latest_pack) {
+      const RC = 2 * Math.PI * 20;
+      this.pkScore.innerHTML = '<span class="rc-ring sm"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" class="sr-bg"/><circle cx="24" cy="24" r="20" class="sr-fg" stroke="url(#hr-ring)" stroke-dasharray="' + RC.toFixed(1) + '" stroke-dashoffset="' + (RC * (1 - r.score / 100)).toFixed(1) + '" transform="rotate(-90 24 24)"/></svg><b class="tnum">' + r.score + '</b></span>'
+        + '<span class="pk-score-t"><b>' + r.score + '% ready</b><span>' + pk.items_ready + ' of ' + pk.items_total + ' items · ' + (open ? open + ' open' : 'nothing open') + '</span></span>';
+    }
     this.pkHeadTotal.textContent = ' of ' + pk.items_total + ' items ready';
     this.pkTodo.innerHTML = '';
     pk.missing.forEach(m => {
@@ -998,6 +1086,18 @@ class LiveDashboard extends Dashboard {
     this.pkDownload.hidden = !this.snap.overview.latest_pack;
   }
   showFile(id) { this.pkFile = id; this.pkSub = 0; this.renderPack(); }
+  /* what is in each file, in two words: [text, tone] */
+  fileStatus(id) {
+    const s = this.snap, pk = s.pack;
+    const docSt = d => ({ draft: ['Draft', 'wait'], pending_approval: ['To approve', 'attn'], approved: ['Approved', 'ok'], rejected: ['Changes asked', 'attn'] }[d.status] || ['Draft', 'wait']);
+    if (id === 'f1') return pk.missing.length ? [pk.missing.length + ' open', 'attn'] : ['Complete', 'ok'];
+    if (id === 'f2') { const n = s.ingredients.length, ok = s.ingredients.filter(i => ST_RESULT[i.status] === 'ok').length; return [ok + ' of ' + n + ' valid', ok === n ? 'ok' : 'attn']; }
+    if (id === 'f3') return docSt(s.documents.find(d => d.doc_type === 'halal_policy') || {});
+    if (id === 'f4') { const ds = s.documents.filter(d => d.doc_type !== 'halal_policy'), ok = ds.filter(d => d.status === 'approved').length; return ok === ds.length ? ['Approved', 'ok'] : [(ds.length - ok) + ' to approve', 'attn']; }
+    if (id === 'f5') { const n = s.site.zones.filter(z => z.status === 'issue').length; return n ? [n + ' to fix', 'attn'] : ['All clear', 'ok']; }
+    if (id === 'f6') { const m = s.approvals.filter(a => a.kind === 'message'), sent = m.filter(a => a.status === 'sent' || a.status === 'replied').length; return sent ? [sent + ' sent', 'ok'] : m.length ? ['Draft', 'attn'] : ['None', 'wait']; }
+    return ['Ready', 'ok'];
+  }
   /* the output: readiness score and a checklist per section; every open row has its follow-up */
   renderChecklist() {
     const s = this.snap, v = this.pkView;
@@ -1016,7 +1116,8 @@ class LiveDashboard extends Dashboard {
       const ev = it.key.startsWith('cert:') ? 'ing:' + it.key.slice(5) : it.key.startsWith('zone:') ? it.key : null;
       if (it.status !== 'ready' && (it.key.startsWith('cert:') || (it.key.startsWith('zone:') && /^open/.test(it.reason || '')))) {
         const zone = it.key.startsWith('zone:'), ing = ingOf(it.key);
-        out.push(this.uploadBtn(it.key, zone ? 'Upload new photo' : ing && ing.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', zone ? 'On-site Inspector' : 'Certificate Checker'));
+        const noPhoto = zone && zoneChecks(s.site.zones.find(z => 'zone:' + z.zone === it.key) || {}).some(c => stateOf(c) === 'missing');
+        out.push(this.uploadBtn(it.key, zone ? (noPhoto ? 'Upload a photo' : 'Upload new photo') : ing && ing.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', zone ? 'On-site Inspector' : 'Certificate Checker'));
       }
       if (it.key.startsWith('doc:') && it.status !== 'ready' && it.document_id) {
         const ap = s.approvals.find(a => a.kind === 'document' && a.document_id === it.document_id && a.status === 'pending');
@@ -1039,7 +1140,8 @@ class LiveDashboard extends Dashboard {
         h('h3', null, h('span', null, sec.title.replace(/^\d+\.\s*/, '')), h('span', { class: 'rc-n tnum' }, sec.items.filter(i => i.status === 'ready').length + ' / ' + sec.items.length)),
         h('ul', null, ...sec.items.map(it => h('li', { class: 'rc-row ' + (it.status === 'ready' ? 'ok' : 'open') },
           h('span', { class: 'ck-i', html: icon(it.status === 'ready' ? 'check' : 'alert') }),
-          h('div', { class: 'rc-t' }, h('b', null, it.label.replace(/^Site self-check: (\w)/, (_, c) => 'Premises: ' + c.toUpperCase())), h('span', null, (it.status === 'ready' ? (it.note || 'Ready') : (it.reason || 'Missing')).replace(/\d{4}-\d{2}-\d{2}/g, d => niceDate(d)).replace(/^expires/, 'Valid until'))),
+          it.key.startsWith('zone:') ? (z => h('div', { class: 'rc-t' }, h('b', null, ZONE_LABEL[z.zone]), z.status === 'unchecked' ? h('span', null, 'Not checked yet') : h('span', { class: 'rc-z' }, ...zoneChecks(z).map(zoneLine))))(s.site.zones.find(z => 'zone:' + z.zone === it.key) || { zone: it.key.slice(5), status: 'unchecked' })
+            : h('div', { class: 'rc-t' }, h('b', null, it.label), h('span', null, (it.status === 'ready' ? (it.note || 'Ready') : (it.reason || 'Missing')).replace(/\d{4}-\d{2}-\d{2}/g, d => niceDate(d)).replace(/^expires/, 'Valid until'))),
           h('div', { class: 'rc-a' }, ...action(it)))))))));
   }
   renderPack() {
@@ -1080,14 +1182,14 @@ class LiveDashboard extends Dashboard {
     } else if (f.id === 'f5') {
       const rows = s.site.zones.map(z => { const open = z.findings.filter(x => x.severity !== 'ok'); return { cls: z.status === 'issue' ? 'bad' : '', cells: [ZONE_LABEL[z.zone], (open.length ? open : z.findings).map(x => x.title).join('; ') || 'Not checked', z.status === 'clear' ? res('OK', 'ok') : z.status === 'issue' ? res('Fix', 'bad') : res('Open', 'bad'), open.length ? 'Remove it, or declare it with a certificate' : '', open.length ? 'Mak Teh' : ''] }; });
       const photo = s.files.find(x => x.zone === 'store');
-      body = [tool([h('b', null, 'Tracker')], [pill('5 zones'), pill(s.site.zones.filter(z => z.status === 'issue').length + ' open')]),
+      body = [tool([h('b', null, 'Tracker')], [pill(s.site.zones.length + ' zones'), pill(s.site.zones.filter(z => z.status === 'issue').length + ' open')]),
         sheet(['Zone', 'What the photo shows', 'Result', 'Fix', 'Owner'], ['18%', '40%', '10%', '22%', '10%'], rows, ['Tracker', 'Photos']),
         photo ? h('figure', { class: 'vw-fig' }, h('img', { class: 'evd-img', src: fileUrl(photo.id), alt: 'Store photo' }), h('figcaption', null, 'Photo attached to the store row: ' + photo.filename)) : null];
     } else if (f.id === 'f1') {
       const pk = s.pack, r = s.overview.readiness;
       const page = h('article', { class: 'pg' }, letter('Ref. MTS/HR/2026/01'),
         h('h1', null, 'Halal certification readiness report'),
-        h('dl', { class: 'pg-meta' }, ...[['Prepared', DATE + (s.overview.latest_pack ? ', ' + liveTime(s.overview.latest_pack.created_at).slice(0, 5) : '')], ['Prepared by', 'HalalReady, Coordinator agent'], ['For', 'Mak Teh, Managing Director']].map(([k, x]) => h('div', null, h('dt', null, k), h('dd', null, x)))),
+        h('dl', { class: 'pg-meta' }, ...[['Prepared', DATE + (s.overview.latest_pack ? ', ' + liveTime(s.overview.latest_pack.created_at).slice(0, 5) : '')], ['Prepared by', 'Halalah, Coordinator agent'], ['For', 'Mak Teh, Managing Director']].map(([k, x]) => h('div', null, h('dt', null, k), h('dd', null, x)))),
         h('h2', null, '1. Summary'),
         h('p', null, s.overview.status_sentence + ' Readiness: ' + r.score + '% (' + r.done + ' of ' + r.total + ' items).'),
         h('h2', null, '2. Requirements by area'),
@@ -1096,7 +1198,7 @@ class LiveDashboard extends Dashboard {
             h('td', null, g.items.filter(i => i.status !== 'ready').map(i => i.label).join('; ') || '—'))))),
         h('h2', null, '3. Actions before submission'),
         h('ol', null, ...(pk.missing.length ? pk.missing.map(m => h('li', null, m.label + ': ' + (m.reason || 'missing'))) : [h('li', null, 'Nothing open.')])),
-        h('footer', { class: 'pg-foot' }, h('span', null, 'Prepared with HalalReady. Certification decisions rest with JAKIM.'), h('span', null, 'Page 1 of 1')));
+        h('footer', { class: 'pg-foot' }, h('span', null, 'Prepared with Halalah. Certification decisions rest with JAKIM.'), h('span', null, 'Page 1 of 1')));
       body = [tool([h('b', null, 'Readiness Report')], [pill('100%'), pill('1 page')]), h('div', { class: 'pg-desk' }, page)];
     } else if (f.id === 'f3') {
       const doc = s.documents.find(d => d.doc_type === 'halal_policy');
@@ -1176,6 +1278,12 @@ class LiveDashboard extends Dashboard {
     });
     const end = $('.dt-end', this.root);
     end.insertBefore(reset, end.children[1] || null);
+    /* presenter: the right arrow moves the run on to its next step (nothing on screen) */
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.repeat) return;
+      if (!this.root.isConnected || this.host.hidden || (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]'))) return;
+      livePost('/demo/next').catch(() => {});
+    });
   }
 
   /* ---------- the graph: no Auditor, and the pack is the output step, not a node ---------- */
@@ -1188,6 +1296,14 @@ class LiveDashboard extends Dashboard {
     this.gLinks.append(l);
     this.links.push({ a: 'coord', b: 'renewal', el: l });
     this.baseLinks.renewal = l;
+  }
+  anchor(id) { return LIVE_ANCHOR[id]; }
+  /* placeholders need a count up front: certificates to check and zones to inspect come from the snapshot */
+  expectedDots(id) {
+    const s = this.snap; if (!s) return 0;
+    if (id === 'checker') return s.ingredients.filter(i => i.cert_id || i.proof_type === 'halal_certificate').length;
+    if (id === 'inspector') return s.site.zones.length;
+    return 0;
   }
   layout() {
     const W = this.gWrap.clientWidth, H = this.gWrap.clientHeight;

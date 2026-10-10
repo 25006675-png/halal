@@ -178,15 +178,105 @@
   .rc-a { grid-column: 2; justify-content: flex-start; }
   .ap-opts { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* check states: warn (fix it) and missing (no photo yet) */
+.cklist li.warn { background: #FFFAEB; border-color: #FEDF89; }
+.cklist li.warn .ck-i { background: #F79009; }
+.cklist li.missing { background: #FFFFFF; border-style: dashed; border-color: #D0D5DD; }
+.cklist li.missing .ck-i { background: #FFFFFF; border: 2px solid #98A2B3; box-sizing: border-box; }
+.cklist q { display: block; margin-top: 3px; font-size: 12.5px; font-weight: 600; color: #B54708; quotes: "“" "”"; }
+.cklist li.missing q { color: #344054; }
+.hl-box.warn { border-color: #F79009; background: rgba(247, 144, 9, .08); box-shadow: 0 0 0 4px rgba(247, 144, 9, .18); animation: hl-in .5s ease-out both; }
+
+/* zone by zone, one line each */
+.zsum { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.zsum li { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; padding: 7px 10px; border-radius: 7px; background: var(--wash, #FAFAFB);
+  border: 1px solid var(--bd, #E4E4E9); font-size: 13px; line-height: 1.4; }
+.zsum li.warn { background: #FFFAEB; border-color: #FEDF89; }
+.zsum li.missing { background: #FFFFFF; border-style: dashed; border-color: #D0D5DD; }
+.zsum li.pick { cursor: pointer; }
+.zsum li.pick:hover { border-color: var(--ink); }
+.zsum b { font-weight: 600; }
+.zc { white-space: nowrap; color: #344054; }
+.zc i { font-style: normal; font-weight: 700; }
+.zc.ok i { color: #12B76A; } .zc.warn i { color: #F79009; } .zc.missing i { color: #667085; } .zc.bad i { color: #D92D20; }
+.zc.warn, .zc.missing { white-space: normal; }
+.zc q { quotes: none; font-weight: 600; color: #B54708; }
+.zc.missing q { color: #344054; }
+.zsum-more summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
+.zsum-more[open] summary { margin-bottom: 6px; }
+.rc-z { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12.5px; }
+.rc-row.open .rc-t .rc-z { color: inherit; }
+
+/* the pack's files: say what is in each one */
+.fb-row .pk-st[data-tone] { font-size: 11.5px; font-weight: 600; width: auto; height: auto; padding: 2px 8px; border-radius: 999px; border: 0;
+  white-space: nowrap; background: #F2F4F7; color: #475467; }
+.fb-row .pk-st[data-tone]::after { content: none; }
+.fb-row .pk-st[data-tone="ok"] { background: #DCFCE7; color: #15803D; }
+.fb-row .pk-st[data-tone="attn"] { background: #FEF0C7; color: #B54708; }
+.fb-row .pk-st[data-tone="wait"] { background: #F2F4F7; color: #667085; }
+.pk-score { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; align-items: center; margin: 4px 8px 10px; padding: 10px 12px;
+  border-radius: 10px; border: 1px solid var(--bd, #E4E4E9); background: #FFFFFF; text-align: left; cursor: pointer; font: inherit; }
+.pk-score[hidden] { display: none; }
+.pk-score:hover { border-color: var(--ink); }
+.rc-ring.sm { width: 48px; height: 48px; }
+.rc-ring.sm svg { width: 48px; height: 48px; }
+.rc-ring.sm .sr-bg, .rc-ring.sm .sr-fg { stroke-width: 5; }
+.rc-ring.sm b { font-size: 14px; }
+.pk-score-t { display: grid; gap: 1px; min-width: 0; }
+.pk-score-t b { font-size: 14px; }
+.pk-score-t span { font-size: 12px; color: var(--muted); }
+
+/* channel choices: icon above the name, so all three fit */
+.ap-opts .ap-opt:not(.btn-line) { flex-direction: column; gap: 4px; height: auto; padding: 8px 4px; font-size: 13px; }
+.fb-list .fb-row { grid-template-columns: 26px minmax(0, 1fr) auto; }
+.fb-list .fb-row[data-state] .pk-st[data-tone]::after { content: none; display: none; }
+.fb-list .fb-row[data-state="pending"] .pk-st[data-tone] { border: 0; }
+.fb-list .fb-row .pk-st[data-tone="ok"] { background: #DCFCE7; color: #15803D; }
+.fb-list .fb-row .pk-st[data-tone="attn"] { background: #FEF0C7; color: #B54708; }
+.fb-list .fb-row .pk-st[data-tone="wait"] { background: #F2F4F7; color: #667085; }
+
+/* the pile: every file the owner dropped in, as small documents on a desk */
+.pile { display: grid; gap: 10px; margin: 6px 0 14px; }
+.pile[hidden] { display: none; }
+.pile-h { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
+.pile-h b { font-size: 15px; font-weight: 600; }
+.pile-h span { font-size: 12.5px; color: var(--muted); }
+.pile-desk { display: flex; flex-wrap: wrap; justify-content: center; padding: 22px 18px 18px; border-radius: 14px;
+  background: radial-gradient(120% 90% at 50% 0%, #FFFFFF 0%, #F3F3F6 100%); border: 1px solid var(--bd, #E4E4E9); }
+.pile-doc { position: relative; width: 92px; height: 122px; margin: -7px -9px; padding: 0; overflow: hidden; border-radius: 4px; cursor: zoom-in;
+  background: #FFFFFF; border: 1px solid #DADAE0; box-shadow: 0 6px 14px -8px rgba(13, 14, 26, .35), 0 1px 2px rgba(13, 14, 26, .08);
+  transform: rotate(var(--r, 0deg)); transition: transform .2s ease, box-shadow .2s ease; animation: pile-in .5s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: var(--d, 0ms); }
+.pile-doc:hover, .pile-doc:focus-visible { transform: rotate(0deg) translateY(-8px) scale(1.14); z-index: 5; box-shadow: 0 16px 30px -12px rgba(13, 14, 26, .45); }
+.pile-doc img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+.pile-ico { display: grid; place-items: center; width: 100%; height: 100%; color: var(--muted); }
+.pile-ico .ico { width: 26px; height: 26px; }
+.pile-ext { position: absolute; top: 5px; left: 5px; padding: 1px 5px; border-radius: 3px; font: 600 9.5px/1.4 var(--font-mono, monospace); color: #FFFFFF; background: #667085; }
+.pile-ext.ext-pdf { background: #D92D20; } .pile-ext.ext-xlsx, .pile-ext.ext-xls { background: #217346; } .pile-ext.ext-jpg, .pile-ext.ext-jpeg, .pile-ext.ext-png { background: #2E90FA; }
+.pile-n { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 5px 4px; font-size: 9.5px; line-height: 1.2; color: #FFFFFF; text-align: left;
+  background: linear-gradient(transparent, rgba(16, 24, 40, .78)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes pile-in { from { opacity: 0; transform: translateY(-36px) rotate(calc(var(--r, 0deg) * 4)) scale(1.06); } }
+@media (max-width: 720px) { .pile-doc { width: 70px; height: 94px; margin: -5px -7px; } }
+
+/* the Input tiles: the kinds of file in each tray, not a count */
+.tile-types { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-right: auto; }
+.tile-ext { padding: 2px 6px; border-radius: 4px; font: 600 10.5px/1.4 var(--font-mono, monospace); color: #FFFFFF; background: #667085; }
+.tile-ext.ext-pdf { background: #D92D20; } .tile-ext.ext-xlsx, .tile-ext.ext-xls { background: #217346; }
+.tile-ext.ext-jpg, .tile-ext.ext-jpeg, .tile-ext.ext-png { background: #2E90FA; }
+
+/* or choose a folder, under the drop area */
+.folder-pick { display: inline-flex; gap: 6px; align-items: center; justify-self: center; margin-top: 8px; font-size: 13px; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.folder-pick .ico { width: 14px; height: 14px; }
 </style>
 </head><body>
-<title>HalalReady</title>
+<title>Halalah</title>
 <meta name="description" content="AI agents in Tencent WorkBuddy that check every supplier certificate, find every gap and prepare a halal certification Application Pack.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500..800&amp;family=Geist:wght@300..800&amp;family=Archivo:wdth,wght@62..125,700..900&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
 <style>
-/* HalalReady: the site and the live demo.
+/* Halalah: the site and the live demo.
    White first. Ink indigo for the brand, a cyan-indigo-violet light for things
    that move (beams, borders, progress), and status colours kept apart.
    One theme by design: the page is white whatever the viewer's setting. */
@@ -573,7 +663,7 @@ html.no-motion .bbc .fb, html.no-motion .bbc .burst, html.no-motion .sparkles { 
 .mq-card .chip { height: 22px; font-size: 12px; }
 
 /* Preview: the live dashboard tilting into view */
-.preview { padding-block: 0 clamp(72px, 9vw, 128px); }
+.preview { padding-block: clamp(72px, 9vw, 128px); }
 .preview-head { will-change: transform; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px 32px; margin-bottom: clamp(24px, 4vw, 40px); }
 .preview-copy { display: grid; gap: 14px; max-width: 720px; }
 .preview-stage { perspective: 1000px; }
@@ -966,6 +1056,118 @@ body:not(.is-demo) { background: #EEF7F2; }
 .foot-mark span { background: linear-gradient(180deg, #BFE3CE, rgba(229, 242, 234, 0)); -webkit-background-clip: text; background-clip: text; }
 .mq { -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent); }
 
+/* Halalah mark: the green certificate icon */
+img.logo-mark { width: auto !important; height: 30px; display: block; border-radius: 3px; }
+.nav img.logo-mark { animation: mark-in .6s .2s var(--spring) both; }
+@keyframes mark-in { from { transform: translateY(6px) scale(.5); opacity: 0; } to { transform: none; opacity: 1; } }
+.dash img.logo-mark { height: 26px; }
+.folder-mark img.logo-mark { height: 54px; opacity: .35; filter: brightness(0) invert(1); }
+.logo { gap: 9px; }
+
+/* Halalah lockup: the name lives inside the green halal document */
+.logo { gap: 0; line-height: 0; }
+.logo-slot.lockup-slot { display: block; }
+.logo svg.lk { height: 30px; width: auto; display: block; overflow: visible; filter: drop-shadow(0 4px 10px rgba(2, 119, 78, .18)); transition: transform .4s var(--spring), filter .4s ease; }
+.logo svg.lk path:nth-of-type(3) { transform-box: fill-box; transform-origin: 0 0; transition: transform .45s var(--spring); }
+.logo:hover svg.lk { transform: translateY(-1px); filter: drop-shadow(0 7px 16px rgba(2, 119, 78, .26)); }
+.logo:hover svg.lk path:nth-of-type(3) { transform: scale(1.18); }
+.nav .logo svg.lk { animation: mark-in .7s .15s var(--spring) both; }
+.dt .logo svg.lk { height: 26px; }
+.foot .logo svg.lk { height: 34px; }
+svg.logo-mark { width: auto !important; height: 30px; display: block; }
+.folder-mark svg.logo-mark { height: 54px; opacity: .35; filter: brightness(0) invert(1); }
+@media (max-width: 560px) { .nav .logo svg.lk { height: 26px; } }
+
+/* Problem: the certification gap as 100 dots, and the two groups it leaves */
+.gap { margin: 0; display: grid; gap: 16px; justify-items: start; }
+.gap-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: clamp(6px, .9vw, 10px); width: min(100%, 340px); }
+.gd { display: block; aspect-ratio: 1; border-radius: 50%; border: 1.5px solid #BFDCCB; background: transparent; opacity: 0; transform: scale(.4); transition: opacity .4s ease, transform .5s var(--spring), background .4s ease, border-color .4s ease, box-shadow .4s ease; transition-delay: var(--d); }
+.gap.in .gd { opacity: 1; transform: none; }
+.gd.on { border-color: var(--g2); }
+.gap.in .gd.on { background: var(--grad); border-color: transparent; box-shadow: 0 0 0 4px rgba(18, 160, 90, .14); transition-delay: calc(var(--d) + 700ms); animation: gd-pulse 2.8s 1.6s ease-in-out infinite; }
+@keyframes gd-pulse { 50% { box-shadow: 0 0 0 7px rgba(18, 160, 90, .06); } }
+.gap figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13.5px; color: var(--muted); }
+.gap-key { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #BFDCCB; display: inline-block; margin-left: 6px; }
+.gap-key:first-child { margin-left: 0; }
+.gap-key.on { background: var(--g2); border-color: var(--g2); }
+.gap-unit { flex-basis: 100%; }
+.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: clamp(40px, 5vw, 64px); }
+.grp { display: grid; gap: 10px; align-content: start; padding: clamp(22px, 2.6vw, 30px); border-radius: 20px; background: var(--surface); border: 1px solid var(--line); transition: transform .35s var(--ease), box-shadow .35s ease, border-color .25s ease; }
+.grp:hover { transform: translateY(-4px); box-shadow: 0 18px 36px -20px rgba(14, 138, 74, .45); border-color: #C6EBD6; }
+.grp-share { font-size: 14.5px; color: var(--muted); }
+.grp-share b { font-family: var(--font-head); font-weight: 750; font-size: 30px; letter-spacing: -.02em; color: var(--ink); margin-right: 6px; font-variant-numeric: tabular-nums; }
+.grp h3 { font-size: 19px; font-weight: 560; margin-bottom: 2px; }
+.grp p:not(.grp-share):not(.grp-fix) { color: var(--muted); font-size: 15.5px; }
+.grp-fix { margin-top: 8px; padding-top: 14px; border-top: 1px dashed #CFE7DA; font-size: 15px; color: var(--text); display: grid; gap: 4px; }
+.grp-fix-l { font-family: var(--font-head); font-weight: 700; font-size: 13px; color: var(--ink); }
+@media (max-width: 860px) { .groups { grid-template-columns: minmax(0, 1fr); } }
+
+/* Problem cards, simplified: share, bar, one pain line, one answer */
+.grp { gap: 12px; overflow: hidden; }
+.grp-share { display: flex; align-items: baseline; gap: 10px; font-size: 15px; }
+.grp-share b { font-size: clamp(40px, 4.6vw, 56px); line-height: 1; letter-spacing: -.035em; margin: 0; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: num-flow 6s linear infinite; }
+.grp-bar { position: relative; height: 10px; border-radius: 99px; background: #E3F1E9; overflow: hidden; margin: 2px 0 8px; }
+.grp-bar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--p) * 1%); min-width: 10px; border-radius: inherit; background: var(--grad); transform: scaleX(0); transform-origin: left; transition: transform 1.4s cubic-bezier(.2, .8, .2, 1) calc(var(--gd, 0ms) + 150ms); }
+.grp-bar i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); transform: translateX(-100%); }
+.grp.in .grp-bar i { transform: none; }
+.grp.in .grp-bar i::after { animation: bar-sheen 2.6s 1.6s ease-in-out infinite; }
+@keyframes bar-sheen { 60%, 100% { transform: translateX(100%); } }
+.grp h3 { font-size: 22px; font-weight: 640; font-family: var(--font-head); letter-spacing: -.01em; }
+.grp p.grp-pain { color: var(--muted); font-size: 16px; }
+.grp .grp-fix { margin-top: 6px; padding: 12px 14px; border: 0; border-radius: 14px; background: #EEF8F2; display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; color: var(--g3);
+  opacity: 0; transform: translateY(10px); transition: opacity .5s ease calc(var(--gd, 0ms) + 1.1s), transform .6s var(--spring) calc(var(--gd, 0ms) + 1.1s); }
+.grp.in .grp-fix { opacity: 1; transform: none; }
+.grp-ico { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; color: #fff; transform: scale(0); transition: transform .5s var(--spring) calc(var(--gd, 0ms) + 1.35s); }
+.grp-ico svg { width: 14px; height: 14px; stroke: #fff; stroke-width: 3; fill: none; }
+.grp.in .grp-ico { transform: none; }
+.grp:hover .grp-bar i { filter: saturate(1.25) brightness(1.05); }
+html.no-motion .grp .grp-fix, html.no-motion .grp .grp-ico { opacity: 1; transform: none; }
+html.no-motion .grp .grp-bar i { transform: none; }
+
+/* Problem split: one proportional bar, two columns under it */
+.split { margin-top: clamp(48px, 6vw, 80px); display: grid; gap: 18px; }
+.split-heads { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.sh { display: grid; gap: 4px; }
+.sh b { font-family: var(--font-head); font-weight: 750; font-size: clamp(44px, 6vw, 84px); line-height: .95; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.sh span { font-size: 15px; color: var(--muted); }
+.sh-out b { color: #2E3B34; }
+.sh-in { text-align: right; justify-items: end; }
+.sh-in b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: num-flow 6s linear infinite; }
+.split-bar { position: relative; display: flex; gap: 6px; height: clamp(44px, 5vw, 64px); }
+.split-bar i { display: block; height: 100%; border-radius: 16px; }
+.sb-out { flex: 1 1 auto; transform-origin: left; transform: scaleX(0); transition: transform 1.3s cubic-bezier(.2, .8, .2, 1);
+  background: repeating-linear-gradient(-45deg, #DCEFE4 0 10px, #EAF6EF 10px 20px); background-size: 28.28px 28.28px; border: 1px solid #CFE7DA; }
+.sb-in { flex: 0 0 max(calc(var(--p) * 1%), 30px); background: var(--grad); transform: scale(0); transition: transform .6s var(--spring) 1.15s;
+  box-shadow: 0 0 0 0 rgba(18, 160, 90, .35); }
+.split.in .sb-out { transform: none; animation: hatch 3s linear 1.3s infinite; }
+.split.in .sb-in { transform: none; animation: sb-pulse 2.4s ease-out 1.8s infinite; }
+@keyframes hatch { to { background-position: 28.28px 0; } }
+@keyframes sb-pulse { 0% { box-shadow: 0 0 0 0 rgba(18, 160, 90, .4); } 100% { box-shadow: 0 0 0 14px rgba(18, 160, 90, 0); } }
+.split-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin-top: 18px; }
+.sc { display: grid; gap: 10px; align-content: start; padding: 8px clamp(20px, 3vw, 40px) 8px 0; opacity: 0; transform: translateY(14px); filter: blur(6px);
+  transition: opacity .7s ease, transform .8s var(--spring), filter .7s ease; }
+.sc + .sc { padding: 8px 0 8px clamp(20px, 3vw, 40px); border-left: 1px solid #D5EADF; }
+.split.in .sc { opacity: 1; transform: none; filter: none; transition-delay: 1.2s; }
+.split.in .sc + .sc { transition-delay: 1.45s; }
+.sc-k { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.sw { width: 22px; height: 12px; border-radius: 4px; display: inline-block; }
+.sw-out { background: repeating-linear-gradient(-45deg, #CDE8D8 0 4px, #EAF6EF 4px 8px); border: 1px solid #CFE7DA; }
+.sw-in { background: var(--grad); }
+.sc h3 { font-family: var(--font-head); font-size: clamp(22px, 2.2vw, 28px); font-weight: 700; letter-spacing: -.02em; }
+.sc-pain { color: var(--muted); font-size: 16.5px; max-width: 42ch; }
+.sc-fix { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 15.5px; font-weight: 600; color: var(--g3); }
+.sc-fix .ico { width: 32px; height: 32px; flex: none; border-radius: 10px; display: grid; place-items: center; background: #E3F4EA; color: var(--g2); transition: transform .4s var(--spring), background .3s ease, color .3s ease; }
+.sc-fix .ico svg { width: 17px; height: 17px; }
+.sc:hover .sc-fix .ico { transform: rotate(-8deg) scale(1.1); background: var(--g2); color: #fff; }
+.sc:hover h3 { color: var(--ink); }
+.sc h3 { transition: color .3s ease; }
+html.no-motion .sb-out, html.no-motion .sb-in, html.no-motion .sc { transform: none; opacity: 1; filter: none; }
+@media (max-width: 760px) {
+  .split-cols { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .sc, .sc + .sc { padding: 0; border: 0; }
+  .sc + .sc { padding-top: 26px; border-top: 1px solid #D5EADF; }
+}
+
 /* ---------- Live demo: Input, Agents, Application Pack ----------
    A crisp tool look: square-ish boxes, hairline borders, small mono labels. */
 .demo-view {
@@ -1129,6 +1331,21 @@ body:not(.is-demo) { background: #EEF7F2; }
 .gs:hover .sl, .gs.is-sel .sl { fill: var(--text); }
 .gs.is-sel .halo { fill: rgba(18, 160, 90, .2); stroke: var(--ink); stroke-width: 1.2; }
 .gs.is-sel .sq { stroke-width: 2.2; }
+/* drag, hover focus, and placeholders that bloom into results */
+.dash:not(.is-embed) .gn { cursor: grab; touch-action: none; }
+.net.is-dragging, .net.is-dragging .gn { cursor: grabbing; }
+.net .gs, .net .gk { transition: opacity .25s ease; }
+.net.is-focus .gn:not(.is-hl) { opacity: .22; }
+.net.is-focus .gs:not(.is-hl) { opacity: .18; }
+.net.is-focus .gk:not(.is-hl) { opacity: .2; }
+.net.is-focus .gk.is-hl:not(.sat) { stroke: var(--g2); stroke-width: 1.8; }
+.net.is-focus .gs.is-hl .sl { fill: var(--text); }
+.gs.is-pend { pointer-events: none; animation: pend-pulse 1.4s ease-in-out infinite alternate; }
+.gs .pend { fill: #CFCFD8; stroke: #FFFFFF; stroke-width: 1.5; }
+.gk.sat.pend { stroke-dasharray: 2 3; }
+.gs .burst { fill: none; stroke: var(--g2); stroke-width: 1.5; pointer-events: none; }
+.gs .burst.bad { stroke: var(--bad); }
+@keyframes pend-pulse { from { opacity: .3; } to { opacity: .9; } }
 .g-banner {
   position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 3; overflow: hidden;
   display: flex; align-items: center; gap: 12px; width: min(460px, calc(100% - 28px)); padding: 10px 10px 12px 10px;
@@ -1757,7 +1974,7 @@ body:not(.is-demo) { background: #EEF7F2; }
 <div id="site">
   <header class="nav" id="nav">
     <div class="nav-inner">
-      <a class="logo" href="#top" aria-label="HalalReady, back to top"><span class="logo-slot"></span><span>HalalReady</span></a>
+      <a class="logo" href="#top" aria-label="Halalah, back to top"><span class="logo-slot lockup-slot"></span></a>
       <nav class="nav-links" aria-label="Sections">
         <a href="#how">How it works</a>
         <a href="#agents">Agents</a>
@@ -1814,6 +2031,39 @@ body:not(.is-demo) { background: #EEF7F2; }
       <div class="mq" id="mq"></div>
     </section>
 
+    <section class="section problem" id="problem" aria-labelledby="problem-h">
+      <div class="wrap">
+        <div class="section-head"><h2 class="h-section" id="problem-h">Halal in practice, <span class="h-soft">not on paper.</span></h2></div>
+        <div class="problem-grid">
+        <div class="problem-copy">
+        <p class="statement">Only <span class="num" data-roll>4.8%</span> of Malaysia&rsquo;s halal companies hold a JAKIM halal certificate: 9,520 out of about 200,000.</p>
+        </div>
+        <div class="problem-stamps" id="problem-stamps" aria-hidden="true"></div>
+        </div>
+        <div class="split" id="split" style="--p:4.8">
+          <div class="split-heads">
+            <p class="sh sh-out"><b data-roll>95.2%</b><span>without a certificate</span></p>
+            <p class="sh sh-in"><b data-roll>4.8%</b><span>with a certificate</span></p>
+          </div>
+          <div class="split-bar" aria-hidden="true"><i class="sb-out"></i><i class="sb-in"></i></div>
+          <div class="split-cols">
+            <div class="sc">
+              <p class="sc-k"><i class="sw sw-out"></i>The 95.2%</p>
+              <h3>Too costly to start</h3>
+              <p class="sc-pain">Consultants charge RM5,000&ndash;25,000 just to prepare the paperwork.</p>
+              <p class="sc-fix"><span class="ico-slot" data-ico="doc"></span>Halalah prepares the whole pack for the owner.</p>
+            </div>
+            <div class="sc">
+              <p class="sc-k"><i class="sw sw-in"></i>The 4.8%</p>
+              <h3>Easy to lose</h3>
+              <p class="sc-pain">JAKIM had revoked 3,068 certificates as of October 2024.</p>
+              <p class="sc-fix"><span class="ico-slot" data-ico="clock"></span>Renewal Watch flags expiring certificates early.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="preview" id="preview" aria-labelledby="preview-h">
       <div class="wrap">
         <div class="preview-head" id="preview-head">
@@ -1829,32 +2079,6 @@ body:not(.is-demo) { background: #EEF7F2; }
               <div class="dash-host" id="embed-host" inert></div>
               <a class="preview-open" href="#demo"><span class="btn btn-ink"><span class="ico-slot" data-ico="play"></span>Open the live demo</span></a>
             </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section problem" id="problem" aria-labelledby="problem-h">
-      <div class="wrap">
-        <div class="section-head"><h2 class="h-section" id="problem-h">Paperwork is where small food makers <span class="h-soft">get stuck.</span></h2></div>
-        <div class="problem-grid">
-        <div class="problem-copy">
-        <p class="statement">JAKIM received <span class="num" data-roll>19,686</span> halal certification applications in 2024.<sup><a href="#src-1" aria-label="Source 1">1</a></sup> By October that year, <span class="num" data-roll>3,068</span> Malaysian halal certifications had been revoked for non-compliance.<sup><a href="#src-2" aria-label="Source 2">2</a></sup></p>
-        </div>
-        <div class="problem-stamps" id="problem-stamps" aria-hidden="true"></div>
-        </div>
-        <div class="facts">
-          <div class="fact" data-spot>
-            <h3>Documents are the hard part</h3>
-            <p>SMEs name documentation as a top challenge.<sup><a href="#src-3" aria-label="Source 3">3</a></sup></p>
-          </div>
-          <div class="fact" data-spot>
-            <h3>Missed deadlines cost certificates</h3>
-            <p>Late corrective action leads to suspension, then revocation.<sup><a href="#src-4" aria-label="Source 4">4</a></sup></p>
-          </div>
-          <div class="fact" data-spot>
-            <h3>Supplier certificates change</h3>
-            <p>In 2025, JAKIM withdrew recognition from three foreign bodies.<sup><a href="#src-5" aria-label="Source 5">5</a></sup></p>
           </div>
         </div>
       </div>
@@ -1958,14 +2182,14 @@ body:not(.is-demo) { background: #EEF7F2; }
             </div>
           </div>
           <div class="layer" data-l="mcp" data-spot>
-            <div class="layer-head"><span class="layer-tag">HalalReady MCP server</span></div>
+            <div class="layer-head"><span class="layer-tag">Halalah MCP server</span></div>
             <div class="tool-row">
               <span class="tool">read_certificate</span><span class="tool">check_recognised_bodies</span><span class="tool">check_jakim_directory</span><span class="tool">extract_video_frames</span><span class="tool">draft_supplier_message</span><span class="tool">send_after_approval</span><span class="tool">write_docx</span><span class="tool">check_requirements</span>
             </div>
           </div>
           <div class="layer-split">
             <div class="layer" data-l="folder" data-spot><span class="layer-tag">Your folder</span><p>The Application Pack is written here.</p></div>
-            <div class="layer" data-l="dash" data-spot><span class="layer-tag">HalalReady dashboard</span><p>The live graph, the evidence and the Approve button.</p></div>
+            <div class="layer" data-l="dash" data-spot><span class="layer-tag">Halalah dashboard</span><p>The live graph, the evidence and the Approve button.</p></div>
           </div>
         </div>
       </div>
@@ -2013,7 +2237,7 @@ body:not(.is-demo) { background: #EEF7F2; }
       <div class="wrap">
         <h2 class="h-section" id="faq-h">Questions, <span class="h-soft">answered.</span></h2>
         <div class="faq-list">
-          <details><summary>Is HalalReady part of JAKIM?<span class="plus" aria-hidden="true"></span></summary><p>No. It is an independent tool. JAKIM and the state authorities issue certificates.</p></details>
+          <details><summary>Is Halalah part of JAKIM?<span class="plus" aria-hidden="true"></span></summary><p>No. It is an independent tool. JAKIM and the state authorities issue certificates.</p></details>
           <details><summary>Does it submit for me?<span class="plus" aria-hidden="true"></span></summary><p>No. You review the pack and submit on MYeHALAL yourself.</p></details>
           <details><summary>Does the AI decide what is halal?<span class="plus" aria-hidden="true"></span></summary><p>No. It flags problems with evidence. You confirm each one.</p></details>
           <details><summary>What do I need to start?<span class="plus" aria-hidden="true"></span></summary><p>Supplier certificates, your ingredient list and a phone video of your premises.</p></details>
@@ -2038,23 +2262,22 @@ body:not(.is-demo) { background: #EEF7F2; }
   <footer class="foot">
     <div class="wrap foot-grid">
       <div class="foot-about">
-        <a class="logo" href="#top"><span class="logo-slot"></span><span>HalalReady</span></a>
-        <p>HalalReady is an independent tool, not affiliated with JAKIM. Certification decisions are made by JAKIM and the state Islamic religious authorities.</p>
+        <a class="logo" href="#top" aria-label="Halalah, back to top"><span class="logo-slot lockup-slot"></span></a>
+        <p>Halalah is an independent tool, not affiliated with JAKIM. Certification decisions are made by JAKIM and the state Islamic religious authorities.</p>
         <p>The sample case uses fictional company, supplier and issuer names.</p>
         <p class="foot-event">AI Hackerdorm Dormathon 2026, Track 2: Agentic Solution</p>
       </div>
       <div class="foot-src">
         <h2>Sources</h2>
         <ol>
-          <li id="src-1"><a href="https://thesun.my/malaysia-news/jakim-investigates-hospital-catering-firm-without-halal-certification-fc14524067/" target="_blank" rel="noopener">JAKIM received 19,686 applications in 2024</a> <span>Bernama via theSun, 2025</span></li>
-          <li id="src-2"><a href="https://nst.com.my/amp/news/nation/2024/10/1118512/jakim-revokes-over-3000-halal-certifications-non-compliance-watch" target="_blank" rel="noopener">Jakim revokes over 3,000 halal certifications</a> <span>New Straits Times, Oct 2024</span></li>
-          <li id="src-3"><a href="https://jurnalumran.utm.my/index.php/umran/article/view/726" target="_blank" rel="noopener">Halal certification among F&amp;B SMEs in northern Johor</a> <span>Jurnal Umran, UTM</span></li>
-          <li id="src-4"><a href="https://www.freemalaysiatoday.com/category/nation/2024/10/12/3068-halal-certificates-revoked-as-of-yesterday-says-jakim" target="_blank" rel="noopener">3,068 halal certificates revoked</a> <span>Free Malaysia Today, Oct 2024</span></li>
-          <li id="src-5"><a href="https://www.bernama.com/en/general/news.php?id=2397805" target="_blank" rel="noopener">Products by three foreign certification bodies banned</a> <span>Bernama, Feb 2025</span></li>
+          <li id="src-1"><a href="https://www.utusan.com.my/berita/2024/11/57-peratus-pemegang-sijil-halal-babit-syarikat-bukan-bumiputera/" target="_blank" rel="noopener">9,520 companies hold halal certificates</a> <span>Utusan Malaysia, Nov 2024</span></li>
+          <li id="src-2"><a href="https://www.thevibes.com/articles/news/64184/only-5-of-200000-halal-companies-hold-jakim-certifications-hdc" target="_blank" rel="noopener">Only 5% of 200,000 halal companies hold JAKIM certification</a> <span>The Vibes, quoting HDC, Jun 2022</span></li>
+          <li id="src-3"><a href="https://www.freemalaysiatoday.com/category/nation/2024/09/26/halal-certification-what-does-it-entail" target="_blank" rel="noopener">Halal certification: what does it entail?</a> <span>Free Malaysia Today, Sep 2024</span></li>
+          <li id="src-4"><a href="https://www.freemalaysiatoday.com/category/nation/2024/10/12/3068-halal-certificates-revoked-as-of-yesterday-says-jakim" target="_blank" rel="noopener">Jakim revokes 3,068 halal certificates</a> <span>Free Malaysia Today, Oct 2024</span></li>
         </ol>
       </div>
     </div>
-    <div class="wrap foot-mark" aria-hidden="true"><span>HalalReady</span></div>
+    <div class="wrap foot-mark" aria-hidden="true"><span>Halalah</span></div>
   </footer>
 </div>
 
@@ -2157,7 +2380,12 @@ const ICONS = {
 function icon(name) {
   return '<span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || '') + '</svg></span>';
 }
-const LOGO_MARK = '<svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><g transform="rotate(-7 16 16)" fill="none" stroke="currentColor"><rect x="3.2" y="3.2" width="25.6" height="25.6" rx="7" stroke-width="2.4"/><rect x="7.2" y="7.2" width="17.6" height="17.6" rx="4" stroke-width="1.1" opacity=".55"/><path d="M11 16.4l3.3 3.3 6.8-7.4" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>';
+/* Halalah lockup: the name set inside the green halal document, one vector mark */
+let _lkN = 0;
+const lockup = () => { const i = 'lk' + (++_lkN); return `<svg class="lk" viewBox="0 0 371.7 100" role="img" aria-label="Halalah"><defs><linearGradient id="${i}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#08965F"/><stop offset="1" stop-color="#02774E"/></linearGradient><linearGradient id="${i}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B7EBD2"/><stop offset="1" stop-color="#6ACB9E"/></linearGradient></defs><path d="M13 0 H341.74 L371.74 30 V87 Q371.74 100 358.74 100 H13 Q0 100 0 87 V13 Q0 0 13 0Z" fill="url(#${i}g)"/><path d="M341.74 0 L371.74 30 L371.74 37 L339.74 35Z" fill="#01563A" opacity=".16"/><path d="M341.74 0 V26 Q341.74 30 345.74 30 H371.74Z" fill="url(#${i}f)"/><path transform="translate(22.00 28.00) scale(0.63)" d="M18.12 73.38 L16.12 73.41 L13.25 73.19 L10.88 72.81 L9.38 72.42 L5.75 70.46 L4.75 69.62 L3.33 68.12 L2.01 66.25 L0.52 63.25 L0.07 61.88 L-0.17 60.00 L-0.24 57.25 L-0.14 55.12 L0.19 53.12 L2.27 47.62 L3.35 45.50 L4.07 43.75 L4.75 42.89 L5.97 42.12 L6.38 40.38 L6.62 39.98 L7.00 39.80 L7.35 40.12 L7.38 40.79 L7.08 41.50 L6.19 42.38 L5.95 45.00 L5.33 49.25 L5.34 50.88 L5.77 53.38 L6.07 54.50 L6.46 55.38 L8.40 58.00 L9.03 58.62 L11.63 60.50 L12.75 60.95 L15.00 61.54 L18.62 62.05 L21.38 61.92 L25.38 61.15 L27.62 60.43 L31.04 58.62 L33.75 56.39 L35.62 54.39 L36.11 53.38 L36.62 51.50 L36.82 48.75 L35.67 31.25 L35.41 29.25 L34.49 24.62 L33.64 17.88 L33.30 16.75 L32.24 14.38 L31.66 11.88 L31.10 10.12 L31.02 9.38 L31.17 8.50 L32.19 5.25 L33.50 3.16 L34.34 1.25 L34.75 0.70 L35.25 0.32 L35.88 0.10 L36.38 0.10 L36.88 0.34 L37.31 0.88 L38.48 4.12 L40.38 7.57 L41.69 9.38 L42.06 10.62 L42.06 11.62 L41.83 12.88 L41.50 13.88 L40.51 16.00 L40.25 17.62 L40.73 22.12 L41.61 28.12 L42.50 44.25 L42.50 49.00 L42.01 54.12 L41.74 55.75 L41.38 56.85 L39.54 61.00 L37.78 63.75 L35.50 66.26 L33.02 68.38 L31.24 69.38 L29.50 70.59 L25.38 72.28 L23.00 72.82 L18.12 73.38Z M44.88 72.50 L43.25 72.32 L42.86 72.12 L42.77 71.75 L46.00 69.49 L48.25 68.47 L49.88 67.42 L51.62 66.51 L53.00 65.45 L54.88 64.33 L57.58 62.25 L61.50 58.61 L65.38 54.51 L67.33 51.88 L67.64 51.12 L67.79 50.25 L67.80 49.12 L67.63 48.25 L66.54 46.00 L65.56 43.12 L63.62 39.54 L61.73 37.12 L60.24 35.50 L57.75 33.17 L55.25 31.57 L53.12 30.74 L52.38 30.30 L49.78 28.25 L48.62 27.04 L48.11 26.25 L47.72 25.12 L47.45 23.50 L47.37 22.25 L47.47 20.88 L48.03 17.12 L48.35 15.75 L48.88 14.79 L49.62 14.35 L50.50 14.35 L51.75 14.84 L55.50 17.42 L56.50 18.39 L57.94 19.50 L61.28 22.62 L63.49 25.12 L65.27 27.62 L66.50 30.20 L67.50 31.91 L68.26 34.75 L69.38 37.25 L69.78 39.38 L70.01 44.12 L70.38 45.10 L70.62 45.34 L71.00 45.43 L71.38 45.25 L71.75 44.68 L72.47 42.00 L73.36 39.75 L75.27 31.75 L75.69 28.12 L75.75 19.38 L76.03 17.38 L76.50 16.10 L77.54 14.00 L78.25 11.62 L78.78 10.50 L80.12 8.64 L80.75 8.37 L81.25 8.59 L81.59 9.12 L81.82 9.88 L82.34 13.00 L83.17 16.38 L83.47 18.25 L83.82 22.38 L84.01 30.75 L84.50 40.63 L84.78 43.00 L85.94 49.50 L86.19 50.50 L86.57 51.38 L88.17 53.62 L89.00 54.42 L90.25 55.04 L92.88 56.02 L94.25 56.34 L96.62 56.50 L99.11 56.38 L107.38 54.55 L110.00 53.32 L112.10 52.62 L112.88 52.05 L113.11 51.38 L112.99 50.75 L112.56 50.12 L111.88 49.59 L106.96 47.50 L104.62 47.01 L102.00 46.95 L99.75 47.27 L98.25 47.85 L96.25 49.04 L93.88 50.18 L93.38 50.30 L93.06 50.12 L93.02 49.50 L94.27 46.00 L95.38 44.38 L96.49 42.25 L98.26 40.00 L99.00 39.24 L101.12 37.58 L102.12 37.12 L103.62 36.79 L105.38 36.66 L107.38 36.74 L109.50 37.03 L111.25 37.48 L115.50 39.30 L117.43 40.50 L119.50 41.34 L121.12 42.47 L123.04 43.38 L125.00 44.65 L127.25 45.32 L129.12 46.24 L130.25 46.60 L132.50 46.94 L136.50 47.28 L137.21 47.62 L137.58 48.25 L137.57 49.00 L137.27 49.75 L133.45 55.62 L131.61 57.75 L130.88 58.30 L130.00 58.50 L128.12 58.44 L125.75 58.55 L120.62 59.13 L114.24 61.38 L111.62 62.60 L109.00 63.47 L107.00 64.56 L104.31 65.25 L101.50 66.41 L99.75 66.78 L97.62 67.02 L92.50 67.20 L89.00 66.88 L87.25 66.42 L84.38 64.57 L82.28 62.38 L80.59 59.62 L80.16 58.62 L79.02 53.12 L78.11 47.50 L77.62 46.23 L77.38 45.96 L77.00 45.89 L76.62 46.17 L76.25 46.94 L75.26 51.00 L73.66 55.38 L72.38 57.53 L71.49 59.38 L69.38 62.41 L65.60 66.50 L63.62 68.20 L62.88 68.70 L61.25 69.43 L59.75 70.31 L58.62 70.69 L50.12 72.09 L44.88 72.50Z" fill="#fff" fill-rule="nonzero"/><rect x="121.95" y="31" width="1.6" height="38" rx=".8" fill="#fff" opacity=".45"/><path transform="translate(136.96 72.00) scale(0.58)" d="M6.60 0.0V-74.5H22.1V-42.30H51.1V-74.5H66.60V0.0H51.1V-28.8H22.1V0.0ZM92.60 1.20Q86.7 1.20 82.4 -0.7Q78.10 -2.6 75.80 -6.15Q73.5 -9.70 73.5 -14.60Q73.5 -19.20 75.6 -22.75Q77.7 -26.3 82.05 -28.70Q86.4 -31.1 92.9 -32.1L109.60 -34.80V-23.8L95.60 -21.3Q92.4 -20.70 90.7 -19.25Q89.0 -17.8 89.0 -15.10Q89.0 -12.60 90.9 -11.20Q92.80 -9.8 95.60 -9.8Q99.30 -9.8 102.10 -11.4Q104.9 -13.0 106.45 -15.75Q108.0 -18.5 108.0 -21.8V-36.0Q108.0 -39.1 105.55 -41.2Q103.1 -43.30 98.9 -43.30Q94.9 -43.30 91.85 -41.10Q88.80 -38.90 87.4 -35.30L75.4 -41.0Q77.0 -45.6 80.5 -48.90Q84.0 -52.2 88.9 -54.0Q93.80 -55.80 99.60 -55.80Q106.5 -55.80 111.80 -53.30Q117.10 -50.80 120.05 -46.35Q123.0 -41.90 123.0 -36.0V0.0H109.0V-8.8L112.4 -9.4Q110.0 -5.80 107.1 -3.45Q104.2 -1.1 100.6 0.05Q97.0 1.20 92.60 1.20ZM131.0 0.0V-75.7H146.0V0.0ZM170.9 1.20Q165.0 1.20 160.7 -0.7Q156.4 -2.6 154.10 -6.15Q151.8 -9.70 151.8 -14.60Q151.8 -19.20 153.9 -22.75Q156.0 -26.3 160.35 -28.70Q164.7 -31.1 171.2 -32.1L187.9 -34.80V-23.8L173.9 -21.3Q170.7 -20.70 169.0 -19.25Q167.3 -17.8 167.3 -15.10Q167.3 -12.60 169.2 -11.20Q171.1 -9.8 173.9 -9.8Q177.6 -9.8 180.39 -11.4Q183.2 -13.0 184.75 -15.75Q186.3 -18.5 186.3 -21.8V-36.0Q186.3 -39.1 183.85 -41.2Q181.4 -43.30 177.2 -43.30Q173.2 -43.30 170.14 -41.10Q167.1 -38.90 165.7 -35.30L153.7 -41.0Q155.3 -45.6 158.8 -48.90Q162.3 -52.2 167.2 -54.0Q172.1 -55.80 177.9 -55.80Q184.8 -55.80 190.10 -53.30Q195.4 -50.80 198.35 -46.35Q201.3 -41.90 201.3 -36.0V0.0H187.3V-8.8L190.7 -9.4Q188.3 -5.80 185.4 -3.45Q182.5 -1.1 178.9 0.05Q175.3 1.20 170.9 1.20ZM209.3 0.0V-75.7H224.3V0.0ZM249.20 1.20Q243.3 1.20 239.0 -0.7Q234.70 -2.6 232.40 -6.15Q230.10 -9.70 230.10 -14.60Q230.10 -19.20 232.20 -22.75Q234.3 -26.3 238.65 -28.70Q243.0 -31.1 249.5 -32.1L266.20 -34.80V-23.8L252.20 -21.3Q249.0 -20.70 247.3 -19.25Q245.60 -17.8 245.60 -15.10Q245.60 -12.60 247.5 -11.20Q249.4 -9.8 252.20 -9.8Q255.9 -9.8 258.7 -11.4Q261.5 -13.0 263.05 -15.75Q264.6 -18.5 264.6 -21.8V-36.0Q264.6 -39.1 262.15 -41.2Q259.7 -43.30 255.5 -43.30Q251.5 -43.30 248.45 -41.10Q245.4 -38.90 244.0 -35.30L232.0 -41.0Q233.60 -45.6 237.10 -48.90Q240.60 -52.2 245.5 -54.0Q250.4 -55.80 256.2 -55.80Q263.1 -55.80 268.40 -53.30Q273.70 -50.80 276.65 -46.35Q279.6 -41.90 279.6 -36.0V0.0H265.6V-8.8L269.0 -9.4Q266.6 -5.80 263.70 -3.45Q260.8 -1.1 257.20 0.05Q253.60 1.20 249.20 1.20ZM287.6 0.0V-75.7H302.6V-43.80L300.8 -46.2Q302.70 -51.1 306.95 -53.45Q311.20 -55.80 316.90 -55.80Q323.1 -55.80 327.75 -53.2Q332.40 -50.6 335.0 -45.95Q337.6 -41.30 337.6 -35.1V0.0H322.6V-31.90Q322.6 -35.1 321.35 -37.40Q320.1 -39.7 317.85 -41.0Q315.6 -42.30 312.6 -42.30Q309.70 -42.30 307.40 -41.0Q305.1 -39.7 303.85 -37.40Q302.6 -35.1 302.6 -31.90V0.0Z" fill="#fff"/></svg>`; };
+const logoMark = () => { const i = 'lm' + (++_lkN); return `<svg class="logo-mark" viewBox="0 0 200.0 250" role="img" aria-label="Halalah"><defs><linearGradient id="${i}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#08965F"/><stop offset="1" stop-color="#02774E"/></linearGradient><linearGradient id="${i}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B7EBD2"/><stop offset="1" stop-color="#6ACB9E"/></linearGradient></defs><path d="M22 0 H138 L200 62 V228 Q200 250 178 250 H22 Q0 250 0 228 V22 Q0 0 22 0Z" fill="url(#${i}g)"/><path d="M138 0 L200 62 L200 74 L135 71Z" fill="#01563A" opacity=".16"/><path d="M138 0 V54 Q138 62 146 62 H200Z" fill="url(#${i}f)"/><path transform="translate(25.00 64.00) scale(1.08)" d="M18.12 73.38 L16.12 73.41 L13.25 73.19 L10.88 72.81 L9.38 72.42 L5.75 70.46 L4.75 69.62 L3.33 68.12 L2.01 66.25 L0.52 63.25 L0.07 61.88 L-0.17 60.00 L-0.24 57.25 L-0.14 55.12 L0.19 53.12 L2.27 47.62 L3.35 45.50 L4.07 43.75 L4.75 42.89 L5.97 42.12 L6.38 40.38 L6.62 39.98 L7.00 39.80 L7.35 40.12 L7.38 40.79 L7.08 41.50 L6.19 42.38 L5.95 45.00 L5.33 49.25 L5.34 50.88 L5.77 53.38 L6.07 54.50 L6.46 55.38 L8.40 58.00 L9.03 58.62 L11.63 60.50 L12.75 60.95 L15.00 61.54 L18.62 62.05 L21.38 61.92 L25.38 61.15 L27.62 60.43 L31.04 58.62 L33.75 56.39 L35.62 54.39 L36.11 53.38 L36.62 51.50 L36.82 48.75 L35.67 31.25 L35.41 29.25 L34.49 24.62 L33.64 17.88 L33.30 16.75 L32.24 14.38 L31.66 11.88 L31.10 10.12 L31.02 9.38 L31.17 8.50 L32.19 5.25 L33.50 3.16 L34.34 1.25 L34.75 0.70 L35.25 0.32 L35.88 0.10 L36.38 0.10 L36.88 0.34 L37.31 0.88 L38.48 4.12 L40.38 7.57 L41.69 9.38 L42.06 10.62 L42.06 11.62 L41.83 12.88 L41.50 13.88 L40.51 16.00 L40.25 17.62 L40.73 22.12 L41.61 28.12 L42.50 44.25 L42.50 49.00 L42.01 54.12 L41.74 55.75 L41.38 56.85 L39.54 61.00 L37.78 63.75 L35.50 66.26 L33.02 68.38 L31.24 69.38 L29.50 70.59 L25.38 72.28 L23.00 72.82 L18.12 73.38Z M44.88 72.50 L43.25 72.32 L42.86 72.12 L42.77 71.75 L46.00 69.49 L48.25 68.47 L49.88 67.42 L51.62 66.51 L53.00 65.45 L54.88 64.33 L57.58 62.25 L61.50 58.61 L65.38 54.51 L67.33 51.88 L67.64 51.12 L67.79 50.25 L67.80 49.12 L67.63 48.25 L66.54 46.00 L65.56 43.12 L63.62 39.54 L61.73 37.12 L60.24 35.50 L57.75 33.17 L55.25 31.57 L53.12 30.74 L52.38 30.30 L49.78 28.25 L48.62 27.04 L48.11 26.25 L47.72 25.12 L47.45 23.50 L47.37 22.25 L47.47 20.88 L48.03 17.12 L48.35 15.75 L48.88 14.79 L49.62 14.35 L50.50 14.35 L51.75 14.84 L55.50 17.42 L56.50 18.39 L57.94 19.50 L61.28 22.62 L63.49 25.12 L65.27 27.62 L66.50 30.20 L67.50 31.91 L68.26 34.75 L69.38 37.25 L69.78 39.38 L70.01 44.12 L70.38 45.10 L70.62 45.34 L71.00 45.43 L71.38 45.25 L71.75 44.68 L72.47 42.00 L73.36 39.75 L75.27 31.75 L75.69 28.12 L75.75 19.38 L76.03 17.38 L76.50 16.10 L77.54 14.00 L78.25 11.62 L78.78 10.50 L80.12 8.64 L80.75 8.37 L81.25 8.59 L81.59 9.12 L81.82 9.88 L82.34 13.00 L83.17 16.38 L83.47 18.25 L83.82 22.38 L84.01 30.75 L84.50 40.63 L84.78 43.00 L85.94 49.50 L86.19 50.50 L86.57 51.38 L88.17 53.62 L89.00 54.42 L90.25 55.04 L92.88 56.02 L94.25 56.34 L96.62 56.50 L99.11 56.38 L107.38 54.55 L110.00 53.32 L112.10 52.62 L112.88 52.05 L113.11 51.38 L112.99 50.75 L112.56 50.12 L111.88 49.59 L106.96 47.50 L104.62 47.01 L102.00 46.95 L99.75 47.27 L98.25 47.85 L96.25 49.04 L93.88 50.18 L93.38 50.30 L93.06 50.12 L93.02 49.50 L94.27 46.00 L95.38 44.38 L96.49 42.25 L98.26 40.00 L99.00 39.24 L101.12 37.58 L102.12 37.12 L103.62 36.79 L105.38 36.66 L107.38 36.74 L109.50 37.03 L111.25 37.48 L115.50 39.30 L117.43 40.50 L119.50 41.34 L121.12 42.47 L123.04 43.38 L125.00 44.65 L127.25 45.32 L129.12 46.24 L130.25 46.60 L132.50 46.94 L136.50 47.28 L137.21 47.62 L137.58 48.25 L137.57 49.00 L137.27 49.75 L133.45 55.62 L131.61 57.75 L130.88 58.30 L130.00 58.50 L128.12 58.44 L125.75 58.55 L120.62 59.13 L114.24 61.38 L111.62 62.60 L109.00 63.47 L107.00 64.56 L104.31 65.25 L101.50 66.41 L99.75 66.78 L97.62 67.02 L92.50 67.20 L89.00 66.88 L87.25 66.42 L84.38 64.57 L82.28 62.38 L80.59 59.62 L80.16 58.62 L79.02 53.12 L78.11 47.50 L77.62 46.23 L77.38 45.96 L77.00 45.89 L76.62 46.17 L76.25 46.94 L75.26 51.00 L73.66 55.38 L72.38 57.53 L71.49 59.38 L69.38 62.41 L65.60 66.50 L63.62 68.20 L62.88 68.70 L61.25 69.43 L59.75 70.31 L58.62 70.69 L50.12 72.09 L44.88 72.50Z" fill="#fff" fill-rule="nonzero"/><rect x="30" y="170" width="140" height="2" rx="1" fill="#fff" opacity=".4"/><path transform="translate(32.23 214.00) scale(0.39)" d="M6.60 0.0V-74.5H22.1V-42.30H51.1V-74.5H66.60V0.0H51.1V-28.8H22.1V0.0ZM92.60 1.20Q86.7 1.20 82.4 -0.7Q78.10 -2.6 75.80 -6.15Q73.5 -9.70 73.5 -14.60Q73.5 -19.20 75.6 -22.75Q77.7 -26.3 82.05 -28.70Q86.4 -31.1 92.9 -32.1L109.60 -34.80V-23.8L95.60 -21.3Q92.4 -20.70 90.7 -19.25Q89.0 -17.8 89.0 -15.10Q89.0 -12.60 90.9 -11.20Q92.80 -9.8 95.60 -9.8Q99.30 -9.8 102.10 -11.4Q104.9 -13.0 106.45 -15.75Q108.0 -18.5 108.0 -21.8V-36.0Q108.0 -39.1 105.55 -41.2Q103.1 -43.30 98.9 -43.30Q94.9 -43.30 91.85 -41.10Q88.80 -38.90 87.4 -35.30L75.4 -41.0Q77.0 -45.6 80.5 -48.90Q84.0 -52.2 88.9 -54.0Q93.80 -55.80 99.60 -55.80Q106.5 -55.80 111.80 -53.30Q117.10 -50.80 120.05 -46.35Q123.0 -41.90 123.0 -36.0V0.0H109.0V-8.8L112.4 -9.4Q110.0 -5.80 107.1 -3.45Q104.2 -1.1 100.6 0.05Q97.0 1.20 92.60 1.20ZM131.0 0.0V-75.7H146.0V0.0ZM170.9 1.20Q165.0 1.20 160.7 -0.7Q156.4 -2.6 154.10 -6.15Q151.8 -9.70 151.8 -14.60Q151.8 -19.20 153.9 -22.75Q156.0 -26.3 160.35 -28.70Q164.7 -31.1 171.2 -32.1L187.9 -34.80V-23.8L173.9 -21.3Q170.7 -20.70 169.0 -19.25Q167.3 -17.8 167.3 -15.10Q167.3 -12.60 169.2 -11.20Q171.1 -9.8 173.9 -9.8Q177.6 -9.8 180.39 -11.4Q183.2 -13.0 184.75 -15.75Q186.3 -18.5 186.3 -21.8V-36.0Q186.3 -39.1 183.85 -41.2Q181.4 -43.30 177.2 -43.30Q173.2 -43.30 170.14 -41.10Q167.1 -38.90 165.7 -35.30L153.7 -41.0Q155.3 -45.6 158.8 -48.90Q162.3 -52.2 167.2 -54.0Q172.1 -55.80 177.9 -55.80Q184.8 -55.80 190.10 -53.30Q195.4 -50.80 198.35 -46.35Q201.3 -41.90 201.3 -36.0V0.0H187.3V-8.8L190.7 -9.4Q188.3 -5.80 185.4 -3.45Q182.5 -1.1 178.9 0.05Q175.3 1.20 170.9 1.20ZM209.3 0.0V-75.7H224.3V0.0ZM249.20 1.20Q243.3 1.20 239.0 -0.7Q234.70 -2.6 232.40 -6.15Q230.10 -9.70 230.10 -14.60Q230.10 -19.20 232.20 -22.75Q234.3 -26.3 238.65 -28.70Q243.0 -31.1 249.5 -32.1L266.20 -34.80V-23.8L252.20 -21.3Q249.0 -20.70 247.3 -19.25Q245.60 -17.8 245.60 -15.10Q245.60 -12.60 247.5 -11.20Q249.4 -9.8 252.20 -9.8Q255.9 -9.8 258.7 -11.4Q261.5 -13.0 263.05 -15.75Q264.6 -18.5 264.6 -21.8V-36.0Q264.6 -39.1 262.15 -41.2Q259.7 -43.30 255.5 -43.30Q251.5 -43.30 248.45 -41.10Q245.4 -38.90 244.0 -35.30L232.0 -41.0Q233.60 -45.6 237.10 -48.90Q240.60 -52.2 245.5 -54.0Q250.4 -55.80 256.2 -55.80Q263.1 -55.80 268.40 -53.30Q273.70 -50.80 276.65 -46.35Q279.6 -41.90 279.6 -36.0V0.0H265.6V-8.8L269.0 -9.4Q266.6 -5.80 263.70 -3.45Q260.8 -1.1 257.20 0.05Q253.60 1.20 249.20 1.20ZM287.6 0.0V-75.7H302.6V-43.80L300.8 -46.2Q302.70 -51.1 306.95 -53.45Q311.20 -55.80 316.90 -55.80Q323.1 -55.80 327.75 -53.2Q332.40 -50.6 335.0 -45.95Q337.6 -41.30 337.6 -35.1V0.0H322.6V-31.90Q322.6 -35.1 321.35 -37.40Q320.1 -39.7 317.85 -41.0Q315.6 -42.30 312.6 -42.30Q309.70 -42.30 307.40 -41.0Q305.1 -39.7 303.85 -37.40Q302.6 -35.1 302.6 -31.90V0.0Z" fill="#fff"/></svg>`; };
+const LOGO_MARK = logoMark();
+
 
 /* ---------- Theme: white by design, kept as a stub for older calls ---------- */
 const Theme = { init() {}, paint() {}, toggle() {} };
@@ -2510,7 +2738,7 @@ const ISSUES = {
     checked: 'Valid-until date against today, 10 Oct 2026',
     result: 'Expired on 14 Aug 2026, 57 days ago',
     next: 'Supplier Chaser drafted a renewal request to Sinar Rempah Trading. It waits for your approval.',
-    todo: 'Chilli paste: approve the follow-up to Sinar Rempah Trading and get the renewed certificate.'
+    todo: 'Chilli paste: waiting for Sinar Rempah Trading to send the renewed certificate.'
   },
   issuer: {
     title: 'Flavouring issuer not recognised', short: 'Rasa Aroma Imports', agent: 'checker', tool: 'check_recognised_bodies',
@@ -2540,9 +2768,7 @@ const MSG = {
 };
 
 /* ---------- The run, as a timeline of events (seconds of demo time) ---------- */
-/* Fixed demo flow: times are seconds after Start, which is 0:40 in the demo video.
-   0–10 team kicks off, 10–45 supplier check, 45–80 premises check, 80–105 pack built. */
-const TS = 1;             /* stretch the base timings */
+const TS = 1.32;          /* stretch the base timings */
 const WALL_START = 9 * 3600;
 const WALL_RATE = 7;      /* one demo second shows as seven seconds of agent time */
 function wallClock(t) {
@@ -2562,103 +2788,100 @@ function buildScript() {
   const at = (t, type, d = {}) => E.push(Object.assign({ t: t * TS, type }, d));
   const gated = (gate, delay, minT, type, d = {}) => E.push(Object.assign({ t: minT * TS, gate, gateDelay: delay * TS, type }, d));
 
-  /* 0–10 s, team kicks off: the graph lights up and the Coordinator splits the work across three agents */
   at(0.15, 'node', { id: 'owner', state: 'done', status: 'Sent one instruction' });
   at(0.15, 'feed', { agent: 'owner', kind: 'prompt', text: 'Prepare Mak Teh Sambal’s halal certification application.' });
   at(0.4, 'edge', { from: 'owner', to: 'coord', tone: 'human', label: 'One prompt' });
   at(0.9, 'node', { id: 'coord', state: 'working', status: 'Reading your folder' });
-  at(2.2, 'feed', { agent: 'coord', text: 'Found 12 supplier certificates, 34 ingredients and a 6-minute premises video.', tool: 'read_folder' });
-  for (let i = 0; i < 6; i++) at(2.4 + i * 0.12, 'req', { group: 'company', index: i, state: 'met' });
-  at(3.6, 'node', { id: 'coord', state: 'waiting', status: 'Plan ready: 6 tasks, 3 in parallel' });
-  at(3.6, 'feed', { agent: 'coord', text: 'Planned 6 tasks. Certificates, the site video and your documents will run in parallel.', tool: 'plan' });
-  at(5.0, 'feed', { agent: 'owner', text: 'Approved the plan in WorkBuddy.' });
-  at(5.0, 'edge', { from: 'owner', to: 'coord', tone: 'human', label: 'Plan approved' });
-  at(5.0, 'node', { id: 'owner', status: 'Approved the plan' });
-  at(5.0, 'plan', {});
-  at(6.0, 'node', { id: 'coord', state: 'working', status: 'Sending work to 3 agents' });
-  at(6.4, 'edge', { from: 'coord', to: 'checker', label: '12 certificates' });
-  at(6.8, 'edge', { from: 'coord', to: 'inspector', label: 'Premises video' });
-  at(7.2, 'edge', { from: 'coord', to: 'writer', label: 'Process notes' });
-  at(7.2, 'node', { id: 'chaser', state: 'idle', status: 'On standby for follow-ups' });
-  at(7.0, 'node', { id: 'checker', state: 'working', status: 'Opening 12 certificates' });
-  at(7.4, 'node', { id: 'inspector', state: 'working', status: 'Extracting frames from the video' });
-  at(7.6, 'node', { id: 'writer', state: 'working', status: 'Drafting the halal policy' });
-  at(8.5, 'node', { id: 'coord', state: 'working', status: 'Watching 3 agents work' });
+  at(1.8, 'feed', { agent: 'coord', text: 'Found 12 supplier certificates, 34 ingredients and a 6-minute premises video.', tool: 'read_folder' });
+  for (let i = 0; i < 6; i++) at(2.0 + i * 0.12, 'req', { group: 'company', index: i, state: 'met' });
+  at(2.8, 'node', { id: 'coord', state: 'waiting', status: 'Plan ready: 6 tasks, 4 in parallel' });
+  at(2.8, 'feed', { agent: 'coord', text: 'Planned 6 tasks. Certificates, the site video and your documents will run in parallel.', tool: 'plan' });
+  at(3.7, 'feed', { agent: 'owner', text: 'Approved the plan in WorkBuddy.' });
+  at(3.7, 'edge', { from: 'owner', to: 'coord', tone: 'human', label: 'Plan approved' });
+  at(3.7, 'node', { id: 'owner', status: 'Approved the plan' });
+  at(3.7, 'plan', {});
+  at(4.2, 'node', { id: 'coord', state: 'working', status: 'Sending work to 4 agents' });
+  at(4.3, 'edge', { from: 'coord', to: 'checker', label: '12 certificates' });
+  at(4.4, 'edge', { from: 'coord', to: 'inspector', label: 'Premises video' });
+  at(4.5, 'edge', { from: 'coord', to: 'writer', label: 'Process notes' });
+  at(4.6, 'edge', { from: 'coord', to: 'chaser', label: 'Stand by' });
+  at(4.6, 'node', { id: 'chaser', state: 'idle', status: 'On standby for follow-ups' });
+  at(5.6, 'node', { id: 'coord', state: 'working', status: 'Watching 4 agents work' });
 
-  /* 10–45 s, supplier check: every certificate, the expired one, the follow-up email */
+  /* Certificate Checker: 12 certificates */
+  at(4.8, 'node', { id: 'checker', state: 'working', status: 'Reading certificate 1 of 12' });
   CERTS.forEach((c, i) => {
-    const t = 11 + i * 2.5;
-    at(t - 0.8, 'node', { id: 'checker', status: 'Reading certificate ' + (i + 1) + ' of 12' });
+    const t = 5.0 + i * 1.45;
+    if (i > 0) at(t - 0.55, 'node', { id: 'checker', status: 'Reading certificate ' + (i + 1) + ' of 12' });
     at(t, 'dot', { agent: 'checker', id: c.id, result: c.result, label: c.item + ', ' + c.supplier + (c.result === 'ok' ? ': valid until ' + c.valid : ''), issue: c.issue });
     at(t, 'req', { group: 'certs', index: i, state: c.result === 'ok' ? 'met' : 'failed' });
     if (c.issue === 'expired') {
       at(t, 'feed', { agent: 'checker', tone: 'bad', text: 'Chilli paste certificate from Sinar Rempah Trading expired on 14 Aug 2026.', tool: 'read_certificate', ev: 'expired' });
       at(t + 0.1, 'issue', { id: 'expired' });
-      at(t + 0.7, 'edge', { from: 'checker', to: 'chaser', tone: 'bad', label: 'Expired certificate', arc: 'over' });
+      at(t + 0.55, 'edge', { from: 'checker', to: 'chaser', tone: 'bad', label: 'Expired certificate', arc: 'over' });
     }
     if (c.issue === 'issuer') {
-      at(t - 0.5, 'feed', { agent: 'checker', text: 'Checking Northgate Halal Council against JAKIM’s recognised list.', tool: 'check_recognised_bodies' });
+      at(t - 0.35, 'feed', { agent: 'checker', text: 'Checking Northgate Halal Council against JAKIM’s recognised list.', tool: 'check_recognised_bodies' });
       at(t, 'feed', { agent: 'checker', tone: 'bad', text: 'Northgate Halal Council is not on JAKIM’s list of recognised foreign certification bodies.', tool: 'check_recognised_bodies', ev: 'issuer' });
       at(t + 0.1, 'issue', { id: 'issuer' });
     }
-    if (i === 5) at(t + 0.4, 'feed', { agent: 'checker', text: '6 of 12 certificates read. 2 problems so far.' });
+    if (i === 5) at(t + 0.25, 'feed', { agent: 'checker', text: '6 of 12 certificates read. 2 problems so far.' });
   });
-  at(40.0, 'node', { id: 'checker', state: 'flag', status: '12 of 12 read, 2 need action' });
-  at(40.3, 'feed', { agent: 'checker', tone: 'ok', text: 'All 12 certificates read. 10 are valid. The soy sauce certificate from Kicap Seri Bayu expires in 30 days.' });
+  at(21.6, 'node', { id: 'checker', state: 'flag', status: '12 of 12 read, 2 need action' });
+  at(21.7, 'feed', { agent: 'checker', tone: 'ok', text: 'All 12 certificates read. 10 are valid. The soy sauce certificate from Kicap Seri Bayu expires in 30 days.' });
 
-  /* Supplier Chaser drafts the follow-up. Hands-free: the run never waits for the approval */
-  at(15.0, 'node', { id: 'chaser', state: 'working', status: 'Drafting a renewal request' });
-  at(22.0, 'approval', { id: 'msg' });
+  /* Supplier Chaser and the approval gate */
+  at(7.5, 'node', { id: 'chaser', state: 'working', status: 'Drafting a renewal request' });
+  at(9.3, 'approval', { id: 'msg' });
   gated('msg', 0.2, 0, 'node', { id: 'chaser', state: 'working', status: 'Sending on WhatsApp' });
   gated('msg', 0.25, 0, 'edge', { from: 'owner', to: 'chaser', tone: 'human', label: 'Approved', arc: 'owner' });
   gated('msg', 0.9, 0, 'feed', { agent: 'chaser', tone: 'ok', text: 'Sent to Encik Razak at Sinar Rempah Trading on WhatsApp.', tool: 'send_after_approval' });
   gated('msg', 0.9, 0, 'dot', { agent: 'chaser', id: 'm1', result: 'ok', label: 'Message to Sinar Rempah Trading, sent' });
   gated('msg', 1.0, 0, 'node', { id: 'chaser', state: 'done', status: 'Sent. Waiting for a reply' });
 
-  /* 45–80 s, premises check: the walkthrough video, zone by zone with timestamps */
-  at(45.0, 'node', { id: 'inspector', status: 'Watching the premises video' });
-  at(45.2, 'feed', { agent: 'inspector', text: 'Frames extracted. Reviewing the premises video zone by zone.', tool: 'extract_video_frames' });
+  /* On-site Inspector: the walkthrough video */
+  at(4.9, 'node', { id: 'inspector', state: 'working', status: 'Watching the premises video' });
   ZONES.forEach((z, j) => {
-    const t = 47 + j * 4.6;
-    at(t - 0.8, 'node', { id: 'inspector', status: z.zone + ', ' + z.tc });
+    const t = 5.6 + j * 2.3;
+    at(t - 0.5, 'node', { id: 'inspector', status: z.zone + ', ' + z.tc });
     at(t, 'dot', { agent: 'inspector', id: z.id, result: z.result, label: z.tc + ' ' + z.zone + ': ' + z.note, issue: z.issue });
     if (z.req != null) at(t, 'req', { group: 'premises', index: z.req, state: z.result === 'ok' ? 'met' : 'failed' });
     if (z.issue === 'oil') {
       at(t, 'feed', { agent: 'inspector', tone: 'bad', text: '02:14, store room: oil tins labelled Cap Merpati Hijau. That brand is not on your ingredient list.', tool: 'extract_video_frames', ev: 'oil' });
-      at(t + 0.6, 'edge', { from: 'inspector', to: 'checker', tone: 'bad', label: 'Oil brand seen at 02:14', arc: 'under' });
-      at(t + 1.8, 'node', { id: 'checker', state: 'working', status: 'Looking up Cap Merpati Hijau' });
-      at(t + 2.4, 'feed', { agent: 'checker', tone: 'bad', text: 'No certificate on file for Cap Merpati Hijau cooking oil.', tool: 'check_jakim_directory', ev: 'oil' });
-      at(t + 2.4, 'dot', { agent: 'checker', id: 'x1', result: 'bad', extra: true, label: 'Extra lookup: Cap Merpati Hijau oil, no certificate', issue: 'oil' });
-      at(t + 2.6, 'issue', { id: 'oil' });
-      at(t + 3.4, 'node', { id: 'checker', state: 'flag', status: '12 read plus 1 lookup, 3 need action' });
+      at(t + 0.5, 'edge', { from: 'inspector', to: 'checker', tone: 'bad', label: 'Oil brand seen at 02:14', arc: 'under' });
+      at(t + 1.4, 'node', { id: 'checker', status: 'Looking up Cap Merpati Hijau' });
+      at(t + 1.6, 'feed', { agent: 'checker', tone: 'bad', text: 'No certificate on file for Cap Merpati Hijau cooking oil.', tool: 'check_jakim_directory', ev: 'oil' });
+      at(t + 1.6, 'dot', { agent: 'checker', id: 'x1', result: 'bad', extra: true, label: 'Extra lookup: Cap Merpati Hijau oil, no certificate', issue: 'oil' });
+      at(t + 1.75, 'issue', { id: 'oil' });
     }
   });
-  at(74.0, 'node', { id: 'inspector', state: 'flag', status: '6 zones checked, 1 thing to fix' });
-  at(74.2, 'feed', { agent: 'inspector', text: 'Finished the walkthrough. 6 zones checked, 1 thing to fix in the store room.' });
+  at(17.8, 'node', { id: 'inspector', state: 'flag', status: '6 zones checked, 1 thing to fix' });
+  at(17.9, 'feed', { agent: 'inspector', text: 'Finished the walkthrough. 6 zones checked, 1 thing to fix in the store room.' });
 
-  /* Document Writer and Auditor, in the background until the pack */
-  const docT = [14, 20, 26, 30, 34, 52];
+  /* Document Writer and Auditor */
+  at(5.0, 'node', { id: 'writer', state: 'working', status: 'Drafting the halal policy' });
+  const docT = [7.8, 12.4, 15.2, 18.0, 20.8, 22.6];
   DOCS.forEach((d, k) => {
     const t = docT[k];
     at(t, 'dot', { agent: 'writer', id: d.id, result: 'ink', label: d.name + ': drafted, waiting for the Auditor' });
     at(t, 'edge', { from: 'writer', to: 'auditor', label: d.name });
-    if (k < DOCS.length - 1) at(t + 0.3, 'node', { id: 'writer', status: 'Drafting the ' + DOCS[k + 1].name.charAt(0).toLowerCase() + DOCS[k + 1].name.slice(1) });
-    if (k === 0) at(t + 0.5, 'node', { id: 'auditor', state: 'working', status: 'Reviewing the halal policy' });
-    const r = t + 1.5;
+    if (k < DOCS.length - 1) at(t + 0.25, 'node', { id: 'writer', status: 'Drafting the ' + DOCS[k + 1].name.charAt(0).toLowerCase() + DOCS[k + 1].name.slice(1) });
+    if (k === 0) at(t + 0.4, 'node', { id: 'auditor', state: 'working', status: 'Reviewing the halal policy' });
+    const r = t + 0.9;
     if (d.rework) {
       at(r, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'warn', label: d.name + ': returned, ' + d.rework.toLowerCase() });
       at(r, 'dot', { agent: 'writer', id: d.id, result: 'warn', label: d.name + ': returned by the Auditor' });
       at(r, 'feed', { agent: 'auditor', tone: 'bad', text: 'Returned the cleaning procedure. It does not say how often surfaces are cleaned.', tool: 'check_requirements' });
-      at(r + 0.3, 'edge', { from: 'auditor', to: 'writer', tone: 'bad', label: 'Returned: no frequency', arc: 'rework' });
-      at(r + 0.5, 'node', { id: 'auditor', status: 'Waiting for draft 2' });
-      at(53.0, 'node', { id: 'writer', status: 'Revising the cleaning procedure' });
-      at(56.0, 'edge', { from: 'writer', to: 'auditor', label: 'Cleaning procedure, draft 2' });
-      at(56.0, 'dot', { agent: 'writer', id: d.id, result: 'ink', label: d.name + ': draft 2 sent' });
-      at(56.3, 'node', { id: 'writer', state: 'done', status: '6 documents drafted, 1 revised' });
-      at(57.5, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'ok', label: d.name + ': passed on draft 2' });
-      at(57.5, 'dot', { agent: 'writer', id: d.id, result: 'ok', label: d.name + ': passed on draft 2' });
-      at(57.5, 'req', { group: 'docs', index: k, state: 'met' });
-      at(57.6, 'feed', { agent: 'auditor', tone: 'ok', text: 'Cleaning procedure passed on draft 2.', tool: 'check_requirements' });
+      at(r + 0.2, 'edge', { from: 'auditor', to: 'writer', tone: 'bad', label: 'Returned: no frequency', arc: 'rework' });
+      at(r + 0.3, 'node', { id: 'auditor', status: 'Waiting for draft 2' });
+      at(r + 0.6, 'node', { id: 'writer', status: 'Revising the cleaning procedure' });
+      at(24.4, 'edge', { from: 'writer', to: 'auditor', label: 'Cleaning procedure, draft 2' });
+      at(24.4, 'dot', { agent: 'writer', id: d.id, result: 'ink', label: d.name + ': draft 2 sent' });
+      at(24.6, 'node', { id: 'writer', state: 'done', status: '6 documents drafted, 1 revised' });
+      at(25.4, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'ok', label: d.name + ': passed on draft 2' });
+      at(25.4, 'dot', { agent: 'writer', id: d.id, result: 'ok', label: d.name + ': passed on draft 2' });
+      at(25.4, 'req', { group: 'docs', index: k, state: 'met' });
+      at(25.5, 'feed', { agent: 'auditor', tone: 'ok', text: 'Cleaning procedure passed on draft 2.', tool: 'check_requirements' });
     } else {
       at(r, 'dot', { agent: 'auditor', id: 'a' + d.id, result: 'ok', label: d.name + ': passed' });
       at(r, 'dot', { agent: 'writer', id: d.id, result: 'ok', label: d.name + ': passed' });
@@ -2667,25 +2890,28 @@ function buildScript() {
       if (k > 0 && k < 5) at(r + 0.05, 'node', { id: 'auditor', status: 'Passed the ' + d.name.charAt(0).toLowerCase() + d.name.slice(1) });
     }
   });
-  at(41.5, 'dot', { agent: 'auditor', id: 'acr', result: 'ok', label: 'Certificate register: reviewed, 2 items for the owner' });
-  at(76.0, 'dot', { agent: 'auditor', id: 'aft', result: 'ok', label: 'Premises fix tracker: reviewed' });
-  at(78.5, 'node', { id: 'auditor', state: 'done', status: 'Everything reviewed, 1 rework' });
+  at(18.6, 'dot', { agent: 'auditor', id: 'aft', result: 'ok', label: 'Premises fix tracker: reviewed' });
+  at(22.2, 'dot', { agent: 'auditor', id: 'acr', result: 'ok', label: 'Certificate register: reviewed, 2 items for the owner' });
+  at(25.8, 'node', { id: 'auditor', state: 'done', status: 'Everything reviewed, 1 rework' });
 
-  /* 80–105 s, pack built: the Application Pack and the short fix-list */
-  at(80.5, 'node', { id: 'coord', state: 'working', status: 'Building the Application Pack' });
-  at(81.0, 'edge', { from: 'auditor', to: 'pack', label: 'Reviewed work' });
-  at(81.5, 'node', { id: 'pack', state: 'working', status: 'Collecting 6 files' });
-  FILES.forEach((f, k) => at(83 + k * 2, 'file', { id: f.id }));
-  at(96.0, 'packReady', {});
-  gated('pack', 1.5, 0, 'edge', { from: 'pack', to: 'renewal', tone: 'ink', label: 'Keep it current' });
-  gated('pack', 1.8, 0, 'node', { id: 'renewal', state: 'working', status: 'Setting a weekly check' });
-  gated('pack', 3.0, 0, 'feed', { agent: 'renewal', text: 'Scheduled a weekly check in WorkBuddy, every Monday at 09:00.', tool: 'scheduled_task' });
-  gated('pack', 5.0, 0, 'feed', { agent: 'renewal', text: 'The soy sauce certificate from Kicap Seri Bayu expires on 9 Nov 2026. A follow-up is planned for 26 Oct.' });
-  gated('pack', 5.2, 0, 'node', { id: 'renewal', state: 'done', status: 'Weekly, Mondays at 09:00' });
-  gated('pack', 8.0, 0, 'complete', {});
+  /* The Application Pack */
+  at(26.3, 'node', { id: 'coord', state: 'working', status: 'Building the Application Pack' });
+  at(26.5, 'edge', { from: 'auditor', to: 'pack', label: 'Reviewed work' });
+  at(26.6, 'node', { id: 'pack', state: 'working', status: 'Collecting 6 files' });
+  FILES.forEach((f, k) => {
+    if (f.gate) gated(f.gate, 1.4, 27.0 + k * 0.5, 'file', { id: f.id });
+    else at(27.0 + k * 0.5, 'file', { id: f.id });
+  });
+  gated('msg', 2.0, 30.4, 'packReady', {});
+  gated('pack', 1.1, 0, 'edge', { from: 'pack', to: 'renewal', tone: 'ink', label: 'Keep it current' });
+  gated('pack', 1.3, 0, 'node', { id: 'renewal', state: 'working', status: 'Setting a weekly check' });
+  gated('pack', 2.0, 0, 'feed', { agent: 'renewal', text: 'Scheduled a weekly check in WorkBuddy, every Monday at 09:00.', tool: 'scheduled_task' });
+  gated('pack', 2.9, 0, 'feed', { agent: 'renewal', text: 'The soy sauce certificate from Kicap Seri Bayu expires on 9 Nov 2026. A follow-up is planned for 26 Oct.' });
+  gated('pack', 3.0, 0, 'node', { id: 'renewal', state: 'done', status: 'Weekly, Mondays at 09:00' });
+  gated('pack', 3.7, 0, 'complete', {});
   return E;
 }
-const RUN_EXPECTED = 105 * TS;
+const RUN_EXPECTED = 36 * TS;
 
 /* ---------- Agent roster for the site ---------- */
 const ROSTER = [
@@ -2981,7 +3207,7 @@ function tickTo(el, to, dur = 600) {
 /* Scroll reveal: blocks rise out of a blur, staggered within their group */
 function initReveal() {
   if (reduced()) return;
-  const groups = ['.facts > .fact', '.steps > .step', '#flow', '.roster-list > li', '.roster-detail', '.ev-tabs > .ev-tab', '.ev-panel', '.stack-list > li', '#layers', '.pack-files > li', '.pack-todo', '.faq-list > details', '.cta-panel', '.problem-copy', '.strip .mq', '.foot-grid > div'];
+  const groups = ['.facts > .fact', '.groups > .grp', '.steps > .step', '#flow', '.roster-list > li', '.roster-detail', '.ev-tabs > .ev-tab', '.ev-panel', '.stack-list > li', '#layers', '.pack-files > li', '.pack-todo', '.faq-list > details', '.cta-panel', '.problem-copy', '.strip .mq', '.foot-grid > div'];
   const els = [];
   groups.forEach(sel => $$(sel).forEach((el, i) => { el.classList.add('rv-wait'); el._rvd = Math.min(i, 8) * 70; els.push(el); }));
   const o = new IntersectionObserver(es => es.forEach(e => {
@@ -3058,7 +3284,7 @@ class Dashboard {
     this.autoApprove = !!opts.autoApprove;
     this.loop = !!opts.loop;
     this.uid = ++DASH_UID;
-    this.speed = this.embed ? 2 : 1;   /* the landing preview plays the 105 s demo flow at 2× */
+    this.speed = 1;
     this.playing = false;
     this.lastTs = null;
     this.lastSlow = 0;
@@ -3076,7 +3302,7 @@ class Dashboard {
 
     /* top bar: logo, the three tabs, run state */
     const top = h('header', { class: 'dt' });
-    top.append(h('a', { class: 'logo', href: this.embed ? null : '#top', html: LOGO_MARK + '<span>HalalReady</span>' }));
+    top.append(h('a', { class: 'logo', href: this.embed ? null : '#top', html: lockup(), 'aria-label': 'Halalah' }));
     const tabs = h('nav', { class: 'dt-tabs', role: 'tablist', 'aria-label': 'Steps' });
     this.tabBtns = {};
     [['input', 'upload', 'Input'], ['agents', 'hub', 'Agents'], ['pack', 'folder', 'Application Pack']].forEach(([k, ic, label], i) => {
@@ -3211,7 +3437,7 @@ class Dashboard {
     this.scrub = h('input', { class: 'scrub', type: 'range', min: 0, max: 1000, value: 0, 'aria-label': 'Replay position' });
     this.scrub.addEventListener('input', () => this.seek(this.scrub.value / 1000 * RUN_EXPECTED));
     const speeds = h('div', { class: 'speeds', role: 'group', 'aria-label': 'Playback speed' });
-    [1, 2, 5, 10].forEach(s => speeds.append(h('button', { type: 'button', 'aria-pressed': s === this.speed ? 'true' : 'false', onclick: e => this.setSpeed(s, e.currentTarget) }, s + '×')));
+    [1, 2, 5, 10].forEach(s => speeds.append(h('button', { type: 'button', 'aria-pressed': s === 1 ? 'true' : 'false', onclick: e => this.setSpeed(s, e.currentTarget) }, s + '×')));
     this.toPack = h('button', { class: 'btn btn-ink ag-pack', type: 'button', onclick: () => this.setTab('pack') }, icon('folder'), 'Open the Application Pack');
     L.append(
       h('span', { class: 'mono-l' }, 'Case'), this.caseText,
@@ -3272,8 +3498,13 @@ class Dashboard {
       g.append(svgEl('text', { class: 'gl', y: id === 'coord' ? 46 : 42, 'text-anchor': 'middle' }));
       g.querySelector('.gl').textContent = id === 'owner' ? 'Mak Teh (you)' : a.name;
       const tt = svgEl('title'); tt.textContent = a.name; g.append(tt);
-      g.addEventListener('click', () => this.select(id, true));
+      g.addEventListener('click', () => { if (this.dragMoved) { this.dragMoved = false; return; } this.select(id, true); });
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.select(id, true); } });
+      g.addEventListener('pointerenter', () => { if (!this.drag) this.focusNode(id); });
+      g.addEventListener('pointerleave', () => { if (!this.drag) this.focusNode(null); });
+      g.addEventListener('focus', () => this.focusNode(id));
+      g.addEventListener('blur', () => this.focusNode(null));
+      if (!this.embed) this.enableDrag(id, g);
       this.gNodes.append(g);
       this.G[id] = { id, el: g, x: 0, y: 0, agent: true };
     };
@@ -3442,12 +3673,14 @@ class Dashboard {
     this.settle(220);
     this.renderDetail();
   }
-  /* jump to any point: replay instantly from the start (the message stays a draft) */
+  /* jump to any point: replay instantly from the start, approving on the way */
   seek(t) {
     const was = this.playing;
     this.started = true;
     this.reset();
     const pick = this.selected;
+    this.advance(Math.min(t, 9.3 * TS + 1), true);
+    if (t > 9.3 * TS + 1 && this.gateAsk != null && this.gates.msg == null) { this.t = this.gateAsk + 1; this.approve(true, true); }
     this.advance(t, true);
     this.selected = pick;
     this.updateNumbers(true);
@@ -3489,6 +3722,7 @@ class Dashboard {
     this.state[id] = state;
     const n = this.G && this.G[id];
     if (n) n.el.dataset.state = state;
+    this.syncPending(id);
   }
   segChange(id, from, to) {
     if (!this.segs[id]) return;
@@ -3534,6 +3768,73 @@ class Dashboard {
     this.kick();
   }
   pos(id) { const n = this.G[id]; return n ? { x: n.x, y: n.y } : null; }
+  anchor(id) { return ANCHOR[id]; }
+  /* move an agent and carry its satellites with it */
+  moveNode(id, x, y) {
+    const n = this.G[id], dx = x - n.x, dy = y - n.y;
+    n.x = x; n.y = y;
+    this.sats.filter(s => s.parent === id).forEach(s => { s.x += dx; s.y += dy; });
+    n.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')');
+    this.drawLinks();
+  }
+  /* drag an agent anywhere; on release it springs back to its place */
+  enableDrag(id, g) {
+    const at = ev => { const r = this.svg.getBoundingClientRect(); return { x: (ev.clientX - r.left) * this.W / r.width, y: (ev.clientY - r.top) * this.H / r.height }; };
+    g.addEventListener('pointerdown', ev => {
+      if (ev.button !== 0 || !this.W) return;
+      const n = this.G[id], p = at(ev);
+      this.drag = { id, pid: ev.pointerId, ox: p.x - n.x, oy: p.y - n.y, cx: ev.clientX, cy: ev.clientY, moved: false };
+      this.dragMoved = false;
+      cancelAnimationFrame(this.springRaf);
+      g.setPointerCapture(ev.pointerId);
+    });
+    g.addEventListener('pointermove', ev => {
+      const d = this.drag;
+      if (!d || d.pid !== ev.pointerId) return;
+      if (!d.moved && Math.hypot(ev.clientX - d.cx, ev.clientY - d.cy) < 4) return;
+      if (!d.moved) { d.moved = true; this.svg.classList.add('is-dragging'); }
+      const p = at(ev);
+      this.moveNode(id, Math.max(20, Math.min(this.W - 20, p.x - d.ox)), Math.max(20, Math.min(this.H - 20, p.y - d.oy)));
+    });
+    const end = ev => {
+      const d = this.drag;
+      if (!d || d.pid !== ev.pointerId) return;
+      this.drag = null;
+      this.svg.classList.remove('is-dragging');
+      if (!g.matches(':hover')) this.focusNode(null);
+      if (!d.moved) return;
+      this.dragMoved = true;
+      this.springBack(id);
+    };
+    g.addEventListener('pointerup', end);
+    g.addEventListener('pointercancel', end);
+  }
+  springBack(id) {
+    const n = this.G[id];
+    let vx = 0, vy = 0;
+    const step = () => {
+      const hx = this.anchor(id)[0] * this.W, hy = this.anchor(id)[1] * this.H;
+      if (reduced()) { this.moveNode(id, hx, hy); this.kick(); return; }
+      vx = (vx + (hx - n.x) * .09) * .8; vy = (vy + (hy - n.y) * .09) * .8;
+      if (Math.abs(vx) + Math.abs(vy) < .05 && Math.hypot(hx - n.x, hy - n.y) < .5) { this.moveNode(id, hx, hy); this.kick(); return; }
+      this.moveNode(id, n.x + vx, n.y + vy);
+      this.springRaf = requestAnimationFrame(step);
+    };
+    this.springRaf = requestAnimationFrame(step);
+  }
+  /* hovering an agent lights up its links, its neighbours and its satellites; the rest fades */
+  focusNode(id) {
+    this.focusId = id;
+    this.svg.classList.toggle('is-focus', !!id);
+    const on = new Set(id ? [id] : []);
+    for (const l of this.links) {
+      const hit = !!id && (l.a === id || l.b === id);
+      if (hit) { on.add(l.a); on.add(l.b); }
+      l.el.classList.toggle('is-hl', hit);
+    }
+    NODE_ORDER.forEach(n => this.G[n].el.classList.toggle('is-hl', on.has(n)));
+    for (const s of this.sats) { const hit = s.parent === id; s.el.classList.toggle('is-hl', hit); s.line.classList.toggle('is-hl', hit); }
+  }
   drawLinks() {
     for (const l of this.links) {
       const a = this.pos(l.a), b = this.pos(l.b);
@@ -3607,34 +3908,76 @@ class Dashboard {
     if (a === 'chaser') return { kind: 'msg', label: 'WhatsApp to Encik Razak' };
     return { kind: 'item', label: e.label || e.id };
   }
+  newSat(agent, key, id, instant) {
+    const p = this.G[agent];
+    const k = this.sats.filter(x => x.parent === agent).length;
+    const away = Math.atan2(p.y - this.G.coord.y, p.x - this.G.coord.x) || -Math.PI / 2;
+    const ang = away + (k % 2 ? 1 : -1) * (.35 + .32 * Math.ceil(k / 2)) * ((k % 4 < 2) ? 1 : .8);
+    const L = 64 + (k % 3) * 20;
+    const s = { key, id, parent: agent, L, vx: 0, vy: 0, x: p.x + Math.cos(ang) * (instant ? L : 10), y: p.y + Math.sin(ang) * (instant ? L : 10) };
+    s.line = svgEl('line', { class: 'gk sat' });
+    this.gLinks.append(s.line);
+    s.el = svgEl('g', { class: 'gs', tabindex: this.embed ? null : '0', role: 'button' });
+    s.el.addEventListener('click', () => { if (!s.pending) this.select('s:' + s.key, true); });
+    s.el.addEventListener('keydown', ev => { if (!s.pending && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); this.select('s:' + s.key, true); } });
+    this.gNodes.prepend(s.el);
+    this.sats.push(s);
+    return s;
+  }
+  /* grey placeholders for the items an agent is still working on; each one blooms into its result */
+  expectedDots(id) {
+    const ids = new Set();
+    for (const e of this.events || []) if (e.type === 'dot' && e.agent === id && !e.extra) ids.add(e.id);
+    return ids.size;
+  }
+  syncPending(id) {
+    if (!this.sats || !this.G[id]) return;
+    const mine = this.sats.filter(s => s.parent === id), pend = mine.filter(s => s.pending);
+    const want = this.state[id] === 'working' ? Math.max(0, this.expectedDots(id) - (mine.length - pend.length)) : 0;
+    for (let i = pend.length; i < want; i++) {
+      const s = this.newSat(id, id + ':~' + (++DASH_UID), null, false);
+      s.pending = true;
+      s.el.setAttribute('class', 'gs is-pend' + (this.focusId === id ? ' is-hl' : ''));
+      s.el.setAttribute('aria-hidden', 'true');
+      s.el.removeAttribute('tabindex');
+      s.el.style.animationDelay = (-Math.random() * 1.4).toFixed(2) + 's';
+      s.line.classList.add('pend');
+      s.el.innerHTML = '<circle class="pend" r="4"/>';
+    }
+    for (const s of pend.slice(want)) { s.el.remove(); s.line.remove(); this.sats.splice(this.sats.indexOf(s), 1); }
+    if (want !== pend.length) this.kick();
+  }
   addSat(e, instant) {
     const key = e.agent + ':' + e.id;
     let s = this.sats.find(x => x.key === key);
     const meta = this.satMeta(e);
+    let bloom = false;
     if (!s) {
-      const p = this.G[e.agent];
-      const k = this.sats.filter(x => x.parent === e.agent).length;
-      const away = Math.atan2(p.y - this.G.coord.y, p.x - this.G.coord.x) || -Math.PI / 2;
-      const ang = away + (k % 2 ? 1 : -1) * (.35 + .32 * Math.ceil(k / 2)) * ((k % 4 < 2) ? 1 : .8);
-      const L = 64 + (k % 3) * 20;
-      s = { key, id: e.id, parent: e.agent, L, vx: 0, vy: 0, x: p.x + Math.cos(ang) * (instant ? L : 10), y: p.y + Math.sin(ang) * (instant ? L : 10) };
-      s.line = svgEl('line', { class: 'gk sat' });
-      this.gLinks.append(s.line);
-      s.el = svgEl('g', { class: 'gs', tabindex: this.embed ? null : '0', role: 'button' });
-      s.el.addEventListener('click', () => this.select('s:' + key, true));
-      s.el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); this.select('s:' + key, true); } });
-      this.gNodes.prepend(s.el);
-      this.sats.push(s);
+      s = this.sats.find(x => x.pending && x.parent === e.agent);
+      if (s) {
+        s.pending = false; s.key = key; s.id = e.id; bloom = true;
+        s.el.removeAttribute('aria-hidden'); s.el.style.animationDelay = '';
+        if (!this.embed) s.el.setAttribute('tabindex', '0');
+        s.line.classList.remove('pend');
+      } else s = this.newSat(e.agent, key, e.id, instant);
     }
     s.meta = meta; s.result = e.result; s.text = e.label;
     const bad = e.result === 'bad';
-    s.el.setAttribute('class', 'gs r-' + e.result + (this.selected === 's:' + key ? ' is-sel' : ''));
+    s.el.setAttribute('class', 'gs r-' + e.result + (this.selected === 's:' + key ? ' is-sel' : '') + (this.focusId === e.agent ? ' is-hl' : ''));
     s.el.setAttribute('aria-label', (meta.label || '') + ', ' + (e.label || ''));
-    s.el.innerHTML = (bad
+    s.el.innerHTML = '<g class="sb">' + (bad
       ? '<rect class="sq" x="-15" y="-10" width="30" height="20" rx="2"/><text class="sq-t" y="3.5" text-anchor="middle">' + esc(meta.tag || '!') + '</text>'
       : '<circle class="halo" r="9"/><circle class="dot" r="' + (e.agent === 'pack' ? 5.5 : 4.5) + '"/>') +
-      '<text class="sl" y="' + (bad ? 21 : 17) + '" text-anchor="middle">' + esc(meta.label.length > 22 ? meta.label.slice(0, 21) + '…' : meta.label) + '</text><title>' + esc(e.label || meta.label) + '</title>';
-    if (!instant && !reduced()) s.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: 'ease-out' });
+      '<text class="sl" y="' + (bad ? 21 : 17) + '" text-anchor="middle">' + esc(meta.label.length > 22 ? meta.label.slice(0, 21) + '…' : meta.label) + '</text></g><title>' + esc(e.label || meta.label) + '</title>';
+    if (!instant && !reduced()) {
+      if (bloom) {
+        s.el.querySelector('.sb').animate([{ transform: 'scale(.3)', opacity: .3 }, { transform: 'scale(1.3)', opacity: 1, offset: .55 }, { transform: 'scale(1)', opacity: 1 }], { duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        const ring = svgEl('circle', { class: 'burst ' + (bad ? 'bad' : ''), r: '6' });
+        s.el.prepend(ring);
+        ring.animate([{ transform: 'scale(1)', opacity: .7 }, { transform: 'scale(3.2)', opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => ring.remove();
+      } else s.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: 'ease-out' });
+    }
+    this.syncPending(e.agent);
     if (!instant) this.kick();
   }
   ensureCross(a, b, tone) {
@@ -3991,7 +4334,7 @@ class Dashboard {
       page.append(letter);
       if (f.id === 'f1') {
         page.append(h('h1', null, 'Halal certification readiness report'),
-          h('dl', { class: 'pg-meta' }, ...[['Prepared', DATE + (at ? ', ' + at : '')], ['Prepared by', 'HalalReady, Coordinator agent'], ['For', 'Mak Teh, Managing Director']].map(([k, x]) => h('div', null, h('dt', null, k), h('dd', null, x)))),
+          h('dl', { class: 'pg-meta' }, ...[['Prepared', DATE + (at ? ', ' + at : '')], ['Prepared by', 'Halalah, Coordinator agent'], ['For', 'Mak Teh, Managing Director']].map(([k, x]) => h('div', null, h('dt', null, k), h('dd', null, x)))),
           h('h2', null, '1. Summary'),
           h('p', null, 'Mak Teh Sambal meets ' + this.met + ' of 29 requirements on the sample checklist. Three items must be resolved before the application is submitted on MYeHALAL. All other documents have been drafted and reviewed.'),
           h('h2', null, '2. Requirements by area'),
@@ -3999,7 +4342,7 @@ class Dashboard {
             h('tbody', null, ...REQ.map(g => h('tr', null, h('td', null, g.label), h('td', null, this.metBy[g.key] + ' / ' + g.items.length), h('td', null, g.key === 'certs' ? 'Chilli paste certificate expired; flavouring issuer not recognised' : g.key === 'premises' ? 'Undeclared cooking oil in the store room' : '—'))))),
           h('h2', null, '3. Actions before submission'),
           h('ol', null, ...['expired', 'issuer', 'oil'].map(id => h('li', null, ISSUES[id].todo))),
-          h('footer', { class: 'pg-foot' }, h('span', null, 'Prepared with HalalReady. Certification decisions rest with JAKIM.'), h('span', null, 'Page 1 of 2')));
+          h('footer', { class: 'pg-foot' }, h('span', null, 'Prepared with Halalah. Certification decisions rest with JAKIM.'), h('span', null, 'Page 1 of 2')));
       } else {
         const secs = [['Halal policy', 'Mak Teh Sambal commits to producing halal sambal and uses only certified ingredients from approved suppliers.'], ['Halal committee', 'Mak Teh (chair), the kitchen supervisor and the store keeper. The committee meets every month and keeps minutes.'], ['Raw material control', '34 ingredients from 11 suppliers. Each has a valid halal certificate on file, checked against JAKIM’s recognised list.'], ['Receiving', 'Every delivery is checked against the approved supplier list before it enters the store. See SOP 1.'], ['Traceability', 'Supplier lot numbers are linked to each batch and printed on every jar. See SOP 2.'], ['Cleaning and sanitation', 'After every batch and at the end of each day. See SOP 3.'], ['Storage and segregation', 'Raw materials are kept off the floor. Items not on the approved list are kept apart and reported.'], ['Training and records', 'Staff are briefed on halal handling every six months. Records are kept for three years.']];
         page.append(h('h1', null, 'Internal Halal Control System (IHCS) manual'),
@@ -4025,7 +4368,7 @@ class Dashboard {
       } else if (k === 0) {
         prev = h('div', { class: 'wa' }, h('div', { class: 'wa-h' }, h('span', { class: 'msg-av' }, MSG.initials), h('div', null, h('b', null, MSG.to), h('span', null, MSG.org))),
           h('div', { class: 'wa-b' }, h('span', { class: 'wa-day' }, 'Today'), h('div', { class: 'bubble' }, h('span', { lang: 'ms' }, this.draftText || MSG.ms), h('div', { class: 'bubble-meta', html: '<span>' + (this.gates.msg != null ? wallClock(this.gates.msg + 0.9 * TS).slice(0, 5) : '') + '</span>' + icon('ticks') })),
-            h('p', { class: 'wa-sys' }, this.gates.msg != null ? 'Sent after Mak Teh approved it' : 'Draft, waiting for Mak Teh’s approval')));
+            h('p', { class: 'wa-sys' }, 'Sent after Mak Teh approved it')));
       } else {
         prev = h('div', { class: 'wa' }, h('div', { class: 'wa-h' }, h('span', { class: 'msg-av' }, 'KS'), h('div', null, h('b', null, 'Kicap Seri Bayu'), h('span', null, 'Planned by Renewal Watch'))),
           h('div', { class: 'wa-b' }, h('span', { class: 'wa-day' }, '26 Oct 2026'), h('p', { class: 'wa-sys' }, 'The soy sauce certificate expires on 9 Nov 2026. A follow-up will be drafted on 26 Oct and wait for your approval.')));
@@ -4064,7 +4407,7 @@ function io(el, cb, opts) {
 }
 function fillIcons(root) {
   $$('.ico-slot[data-ico]', root || document).forEach(s => { s.innerHTML = icon(s.dataset.ico); });
-  $$('.logo-slot', root || document).forEach(s => { s.innerHTML = LOGO_MARK; });
+  $$('.logo-slot', root || document).forEach(s => { s.innerHTML = s.classList.contains('lockup-slot') ? lockup() : logoMark(); });
 }
 function onFrameScroll(fn) {
   let queued = false;
@@ -4193,7 +4536,10 @@ function initPreview() {
 function initRoll() {
   $$('[data-roll]').forEach(el => {
     const final = el.textContent;
-    const target = parseInt(final.replace(/\D/g, ''), 10);
+    const raw = final.replace(/[^\d.]/g, '');
+    const target = parseFloat(raw);
+    const dp = raw.includes('.') ? raw.split('.')[1].length : 0;
+    const suffix = final.replace(/[\d.,]/g, '');
     io(el, vis => {
       if (!vis || el._done || reduced()) return;
       el._done = true;
@@ -4201,7 +4547,7 @@ function initRoll() {
       const step = now => {
         const k = Math.min(1, (now - t0) / dur);
         const e = 1 - Math.pow(1 - k, 3);
-        el.textContent = Math.round(target * e).toLocaleString('en-US');
+        el.textContent = (target * e).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }) + suffix;
         if (k < 1) requestAnimationFrame(step); else el.textContent = final;
       };
       requestAnimationFrame(step);
@@ -4236,6 +4582,14 @@ function initProblemStamps() {
       ], { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1)' });
     }
   }, { threshold: .5 });
+}
+
+/* Problem split: one bar shows the whole industry, then each side explains itself */
+function initGroups() {
+  const el = $('#split');
+  if (!el) return;
+  if (reduced()) { el.classList.add('in'); return; }
+  io(el, vis => { if (vis) el.classList.add('in'); }, { threshold: .4 });
 }
 
 /* How it works: one prompt flowing through the team */
@@ -4654,7 +5008,7 @@ function initCta() {
 /* =====================================================================
    HalalReady live: the template's Dashboard, driven by the real backend.
 
-   scripts/build_dashboard.py injects this file into GreenHalalReady.html's
+   scripts/build_dashboard.py injects this file into index.html's
    script, just before the routing code, so it can use the template's own
    helpers (h, icon, beam, ...) and extend its Dashboard class. The landing
    page and its scripted preview stay as designed; "Live demo" (#demo) opens
@@ -4714,11 +5068,15 @@ function marked(src, boxes, alt) {
   (boxes || []).forEach(b => { if (b && b.box) wrap.append(h('span', { class: 'hl-box ' + (b.tone || 'bad'), 'data-k': b.key || '', style: { left: b.box[0] * 100 + '%', top: b.box[1] * 100 + '%', width: (b.box[2] - b.box[0]) * 100 + '%', height: (b.box[3] - b.box[1]) * 100 + '%' } })); });
   return wrap;
 }
-/* the checklist an agent ran: a tick or a cross, what was checked, what it found */
+const stateOf = c => c.state || (c.ok ? 'ok' : 'bad');
+const isOk = c => stateOf(c) === 'ok';
+const STATE_ICON = { ok: 'check', bad: 'x', warn: 'alert', missing: null };
+/* the checklist an agent ran: what was checked, what it found, and what to do */
 function checkList(checks, img) {
   return h('ul', { class: 'cklist' }, ...(checks || []).map(c => {
-    const li = h('li', { class: c.ok ? 'ok' : 'bad' }, h('span', { class: 'ck-i', html: icon(c.ok ? 'check' : 'x') }),
-      h('div', null, h('b', null, c.label), c.detail ? h('span', null, c.detail) : null));
+    const st = stateOf(c);
+    const li = h('li', { class: st }, h('span', { class: 'ck-i', html: STATE_ICON[st] ? icon(STATE_ICON[st]) : '' }),
+      h('div', null, h('b', null, c.label), c.detail ? h('span', null, c.detail) : null, c.ask ? h('q', null, c.ask) : null));
     if (img && c.key && c.box) {
       li.addEventListener('mouseenter', () => $$('.hl-box', img).forEach(b => b.classList.toggle('on', b.dataset.k === c.key)));
       li.addEventListener('mouseleave', () => $$('.hl-box', img).forEach(b => b.classList.remove('on')));
@@ -4741,8 +5099,41 @@ function fileView(f) {
   }).catch(() => { box.innerHTML = '<p class="evd-none">This file could not be opened.</p>'; });
   return box;
 }
+/* everything that was dropped: files, and every file inside dropped folders (sub-folders too) */
+async function filesFromDrop(dt) {
+  const entries = Array.from(dt.items || []).map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);   /* read before any await */
+  if (!entries.length) return Array.from(dt.files || []);
+  const out = [];
+  const walk = async entry => {
+    if (entry.isFile) { out.push(await new Promise((res, rej) => entry.file(res, rej))); return; }
+    if (!entry.isDirectory) return;
+    const reader = entry.createReader();
+    for (;;) {
+      const batch = await new Promise((res, rej) => reader.readEntries(res, rej));   /* comes in batches of up to 100 */
+      if (!batch.length) break;
+      for (const e of batch) await walk(e);
+    }
+  };
+  for (const e of entries) await walk(e);
+  return out;
+}
 const fileIcon = name => isSheet(name) ? 'sheet' : /\.(jpe?g|png|heic|webp)$/i.test(name || '') ? 'eye' : 'doc';
 const ZONE_LABEL = { store: 'Raw material store', processing: 'Processing area', packing: 'Packing area', cleaning: 'Cleaning area', waste: 'Waste area' };
+const zoneChecks = z => ((z.findings || []).filter(f => f.checks).pop() || {}).checks || [];
+const ZMARK = { ok: '✓', warn: '⚠', missing: '○', bad: '✗' };
+function zoneLine(c) {
+  const st = stateOf(c);
+  return h('span', { class: 'zc ' + st }, h('i', null, ZMARK[st]), ' ' + c.label.charAt(0).toLowerCase() + c.label.slice(1),
+    c.ask ? h('q', null, (st === 'missing' ? ' → ' : ' ') + '“' + c.ask + '”') : null);
+}
+function zoneSummary(zones, onPick) {
+  return h('ul', { class: 'zsum' }, ...zones.filter(z => z.status !== 'unchecked').map(z => {
+    const cs = zoneChecks(z), st = cs.some(c => stateOf(c) === 'missing') ? 'missing' : cs.some(c => !isOk(c)) ? 'warn' : 'ok';
+    const li = h('li', { class: st }, h('b', null, ZONE_LABEL[z.zone] + ':'), ...cs.map(zoneLine));
+    if (onPick) { li.classList.add('pick'); li.addEventListener('click', () => onPick(z)); }
+    return li;
+  }));
+}
 const ST_TEXT = { valid: 'Valid', expiring: 'Expiring soon', expired: 'Expired', missing: 'No certificate', unclear: 'Can’t read the scan', unrecognised_issuer: 'Issuer not recognised' };
 const ST_RESULT = { valid: 'ok', expiring: 'warn', unclear: 'warn', expired: 'bad', missing: 'bad', unrecognised_issuer: 'bad' };
 const LIVE_FILES = [
@@ -5032,7 +5423,7 @@ class LiveDashboard extends Dashboard {
     this.scoreRing.setAttribute('stroke-dashoffset', (this.scoreRC * (1 - r.score / 100)).toFixed(1));
     this.scoreBox.classList.toggle('good', r.score >= 80);
     const t = this.scoreBox.querySelector('.score-t');
-    if (t) { t.children[1].textContent = r.ingredients_covered + '/' + r.ingredients_total + ' ingredients covered'; t.children[2].textContent = r.zones_clear + '/5 zones clear · ' + r.documents_approved + '/3 documents approved'; }
+    if (t) { t.children[1].textContent = r.ingredients_covered + '/' + r.ingredients_total + ' ingredients covered'; t.children[2].textContent = r.zones_clear + '/' + r.zones_total + ' zones clear · ' + r.documents_approved + '/3 documents approved'; }
     this.pkHeadScore.textContent = String(s.pack.items_ready);
     const total = s.tasks.length, doneN = s.tasks.filter(x => x.status === 'done').length;
     this.runBar.style.width = (total ? Math.round(doneN / total * 100) : 0) + '%';
@@ -5116,6 +5507,8 @@ class LiveDashboard extends Dashboard {
   }
   liveCard(n) {
     const card = h('section', { class: 'ap', 'aria-label': n.title });
+    const append = card.append.bind(card);
+    card.append = (...xs) => append(...xs.flat().filter(x => x != null && x !== false));   /* skip parts a card doesn't have */
     const who = AGENTS[AG[n.requested_by]] || AGENTS.coord;
     const extra = parseJSON(n.payload) || {};
     const head = (title, ic) => h('div', { class: 'ap-h' }, h('span', { class: 'ap-ico', 'aria-hidden': 'true', html: icon(ic || 'hand') }),
@@ -5177,7 +5570,7 @@ class LiveDashboard extends Dashboard {
     } else if (n.kind === 'question' && extra.options) {
       /* a decision the run waits for */
       const ing = this.snap.ingredients.find(i => i.id === n.ingredient_id);
-      const failed = ((ing && ing.cert_checks) || []).filter(c => !c.ok);
+      const failed = ((ing && ing.cert_checks) || []).filter(c => !isOk(c));
       const thumb = n.file_id ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box, key: c.key })), n.title) : null;
       if (thumb) { thumb.classList.add('ap-shot'); thumb.addEventListener('click', () => this.openEvidence('ing:' + n.ingredient_id)); }
       card.classList.add('ap-block');
@@ -5189,21 +5582,23 @@ class LiveDashboard extends Dashboard {
     } else if (n.kind === 'question') {
       const zone = extra.zone && this.snap.site.zones.find(z => z.zone === extra.zone);
       const finding = zone && zone.findings.find(f => f.status === 'open' && f.severity !== 'ok');
-      const failed = ((finding && finding.checks) || []).filter(c => !c.ok);
+      const failed = ((finding && finding.checks) || []).filter(c => !isOk(c));
       const fileIn = h('input', { type: 'file', accept: zone ? 'image/*' : 'image/*,application/pdf,.xlsx,.docx', class: 'sr-only' });
-      const picked = h('span', { class: 'fn' }, zone ? 'Upload the new photo' : 'Attach a file');
-      fileIn.addEventListener('change', () => { picked.textContent = fileIn.files[0] ? fileIn.files[0].name : 'Upload the new photo'; });
-      const shot = n.file_id ? (zone ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box }))) : h('img', { class: 'ap-thumb', src: fileUrl(n.file_id), alt: '' })) : null;
+      const ask = zone && !n.file_id ? 'Upload a photo' : 'Upload the new photo';
+      const picked = h('span', { class: 'fn' }, zone ? ask : 'Attach a file');
+      fileIn.addEventListener('change', () => { picked.textContent = fileIn.files[0] ? fileIn.files[0].name : ask; });
+      const shot = n.file_id ? (zone ? marked(fileUrl(n.file_id), failed.map(c => ({ box: c.box, tone: stateOf(c) === 'warn' ? 'warn' : 'bad' }))) : h('img', { class: 'ap-thumb', src: fileUrl(n.file_id), alt: '' })) : null;
       if (shot) { shot.classList.add(zone ? 'ap-shot' : 'ap-thumb'); shot.addEventListener('click', () => zone ? this.openEvidence('zone:' + zone.zone) : this.openFileView(n.file_id, n.title)); }
-      card.append(head(zone ? 'Fix suggested' : 'Needs your answer', zone ? 'eye' : 'hand'),
+      card.append(head(zone ? (n.file_id ? 'Fix suggested' : 'Photo missing') : 'Needs your answer', zone ? 'eye' : 'hand'),
         h('p', { class: 'ap-why' }, h('b', null, n.title)),
         zone ? shot : h('div', { class: 'ap-q' }, shot, h('p', { class: 'ap-why' }, n.body_en || '')),
         zone && failed.length ? checkList(failed) : null,
         zone ? h('p', { class: 'ap-why ap-tip', html: icon('sparkle') + '<span>' + esc(n.body_en || '') + '</span>' }) : null,
+        zone ? h('details', { class: 'zsum-more' }, h('summary', null, 'All zones'), zoneSummary(this.snap.site.zones)) : null,
         h('label', { class: 'dropbar ap-drop' }, h('span', { class: 'dropbar-ico', html: icon('upload') }), picked, fileIn),
         h('div', { class: 'ap-actions' }, h('button', { class: 'btn btn-ink mb', type: 'button', onclick: () => {
           if (!fileIn.files[0]) { this.toast(zone ? 'Choose the new photo first.' : 'Attach a file first.'); return; }
-          const fd = new FormData(); fd.append('files', fileIn.files[0]); fd.append('text', 'New photo after the fix');
+          const fd = new FormData(); fd.append('files', fileIn.files[0]); fd.append('text', n.file_id ? 'New photo after the fix' : 'Here is the photo');
           liveApi('/approvals/' + n.id + '/answer', { method: 'POST', body: fd }).then(() => { doneHead('Photo sent'); this.toast('Sent to the ' + who.name + '.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
         } }, 'Send to the ' + who.name)));
     }
@@ -5259,7 +5654,7 @@ class LiveDashboard extends Dashboard {
     const s = this.snap;
     const sup = s.suppliers.find(x => x.id === i.supplier_id) || {};
     const who = sup.contact_name || i.supplier_name || 'the supplier';
-    const failed = (i.cert_checks || []).filter(c => !c.ok).map(c => c.label);
+    const failed = (i.cert_checks || []).filter(c => !isOk(c)).map(c => c.label);
     const q = s.feed.needs_you.find(n => n.kind === 'question' && n.ingredient_id === i.id && (parseJSON(n.payload) || {}).options);
     const m = s.approvals.find(a => a.kind === 'message' && a.ingredient_id === i.id);
     const upload = this.uploadBtn('cert:' + i.id, i.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', 'Certificate Checker');
@@ -5285,7 +5680,7 @@ class LiveDashboard extends Dashboard {
   zoneStep(z) {
     const f = z.findings.find(x => x.status === 'open' && x.severity !== 'ok') || {};
     return { title: ZONE_LABEL[z.zone] + ': ' + (f.title || 'fix needed').toLowerCase(), text: f.suggestion || 'Fix it, then upload a new photo of the zone.',
-      actions: [this.uploadBtn('zone:' + z.zone, 'Upload new photo', 'On-site Inspector'), h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, 'See where')] };
+      actions: [this.uploadBtn('zone:' + z.zone, zoneChecks(z).some(c => stateOf(c) === 'missing') ? 'Upload a photo' : 'Upload new photo', 'On-site Inspector'), h('button', { class: 'ev-btn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, 'See where')] };
   }
   nextSteps(id) {
     const s = this.snap; if (!s) return [];
@@ -5373,12 +5768,18 @@ class LiveDashboard extends Dashboard {
     const p = this.panes.input;
     /* tiles and lists are rebuilt from the backend in syncInput() */
     this.inTiles = $('.tiles', p);
+    /* everything the owner dropped in, as a pile of small documents */
+    this.pileEl = h('div', { class: 'pile', hidden: true });
+    this.inTiles.before(this.pileEl);
     this.inFilesHead = $$('.in-sec .mono-l.ok', p)[0];
     this.inFilesChip = $('.cmp-chip.ok', p);
     const drop = $('.dropbar', p), fileIn = $('input[type=file]', drop);
     const upload = files => {
-      const fd = new FormData(); Array.from(files || []).forEach(f => fd.append('files', f));
-      if (!fd.has('files')) return;
+      /* a whole folder comes in at once; system files (.DS_Store, Thumbs.db, ~$ lock files) stay out */
+      const keep = Array.from(files || []).filter(f => f.size && !/^(\.|~\$)|^(thumbs\.db|desktop\.ini)$/i.test(f.name))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      const fd = new FormData(); keep.forEach(f => fd.append('files', f));
+      if (!fd.has('files')) { this.toast('No files found in what you dropped.'); return; }
       liveApi('/business/' + LIVE_BIZ + '/files', { method: 'POST', body: fd }).then(r => { this.toast(r.files.length + (r.files.length === 1 ? ' file' : ' files') + ' added.'); this.refreshSoon(); }).catch(err => this.toast(err.message));
     };
     void fileIn;
@@ -5386,14 +5787,19 @@ class LiveDashboard extends Dashboard {
     const fi2 = $('input[type=file]', d2); fi2.addEventListener('change', () => { upload(fi2.files); fi2.value = ''; });
     d2.addEventListener('dragover', e => { e.preventDefault(); d2.classList.add('over'); });
     d2.addEventListener('dragleave', () => d2.classList.remove('over'));
-    d2.addEventListener('drop', e => { e.preventDefault(); d2.classList.remove('over'); upload(e.dataTransfer.files); });
+    d2.addEventListener('drop', e => { e.preventDefault(); d2.classList.remove('over'); filesFromDrop(e.dataTransfer).then(upload).catch(err => this.toast(err.message)); });
+    const head = d2.querySelector('b'); if (head) { head.textContent = 'Drop your files or a whole folder here'; head.nextSibling && (head.nextSibling.textContent = ' or browse'); }
+    /* or pick a folder in the file dialog */
+    const folderIn = h('input', { type: 'file', multiple: true, webkitdirectory: true, class: 'sr-only' });
+    folderIn.addEventListener('change', () => { upload(folderIn.files); folderIn.value = ''; });
+    d2.after(h('label', { class: 'folder-pick' }, icon('folder'), 'or choose a folder', folderIn));
     $('.in-note', p)?.remove();
     $('.own-list', p)?.remove();
     this.inProducts = $$('.cmp-in', p)[1];
     if (this.inProducts) this.inProducts.value = '2 sambal products';
     $$('.sugg-b', p).forEach((b, i) => { const t = ['Prepare Mak Teh Sambal’s halal certification application.', 'Check every supplier certificate before I renew.', 'Check my premises photos for halal risks.'][i]; if (t) { b.textContent = t; b.onclick = () => { this.inPrompt.value = t; this.inPrompt.focus(); }; } });
     [['Plan', 'The Coordinator reads your files'], ['Approve', 'You approve the plan'], ['Work', 'Three agents in parallel'], ['Decide', 'You choose what to do about problems'], ['Output', 'Readiness score and checklist']]
-      .forEach(([b, t], i) => { const li = $$('.hsteps li', p)[i]; if (li) { li.querySelector('b').textContent = b; li.querySelector('span:last-child').textContent = t; } });
+      .forEach(([b, t], i) => { const li = $$('.hsteps li', p)[i]; if (li) { li.querySelector(':scope > b').textContent = b; li.querySelector(':scope > span:last-child').textContent = t; } });
     this.startBtn.querySelector('span').textContent = 'Analyze';
   }
   trayOf(f) {
@@ -5404,8 +5810,32 @@ class LiveDashboard extends Dashboard {
     if (/cert|sijil|invoice|invois|supplier|pembekal/.test(n)) return 'suppliers';
     return 'company';
   }
+  renderPile(files) {
+    const el = this.pileEl;
+    el.innerHTML = '';
+    el.hidden = !files.length;
+    if (!files.length) return;
+    const ext = f => (f.filename.split('.').pop() || '').toLowerCase();
+    const certs = files.filter(f => /cert|sijil/i.test(f.filename)).length;
+    const photos = files.filter(f => /^(jpe?g|png|heic|webp)$/.test(ext(f)) && !/cert|sijil/i.test(f.filename)).length;
+    const sheets = files.filter(f => /^xlsx?$/.test(ext(f))).length, pdfs = files.filter(f => ext(f) === 'pdf').length;
+    const parts = [[certs, 'certificate'], [sheets, 'spreadsheet'], [pdfs, 'PDF'], [photos, 'photo']].filter(([n]) => n).map(([n, w]) => n + ' ' + w + (n > 1 ? 's' : ''));
+    const desk = h('div', { class: 'pile-desk' });
+    files.forEach((f, i) => {
+      const card = h('button', { class: 'pile-doc', type: 'button', title: f.filename, 'aria-label': 'Open ' + f.filename,
+        style: { '--r': (((f.id * 37) % 9) - 4) + 'deg', '--d': (i * 40) + 'ms' }, onclick: () => this.openFileView(f.id) });
+      const img = h('img', { src: '/files/' + f.id + '/thumb', alt: '', loading: 'lazy' });
+      img.addEventListener('error', () => img.replaceWith(h('span', { class: 'pile-ico', html: icon(fileIcon(f.filename)) })));
+      card.append(img, h('span', { class: 'pile-ext ext-' + ext(f) }, ext(f).toUpperCase()),
+        h('span', { class: 'pile-n' }, f.filename.replace(/^\d+_/, '').replace(/\.\w+$/, '').replace(/_/g, ' ')));
+      desk.append(card);
+    });
+    el.append(h('div', { class: 'pile-h' }, h('b', null, files.length + ' documents to read, check and file'), h('span', null, parts.join(' · '))), desk);
+  }
   syncInput() {
     const s = this.snap; if (!s || !this.inTiles) return;
+    const ids = s.files.map(f => f.id + f.filename).join('|');
+    if (ids !== this.pileIds) { this.pileIds = ids; this.renderPile(s.files.filter(f => f.source !== 'supplier_reply')); }
     const groups = { suppliers: [], products: [], site: [], company: [] };
     s.files.forEach(f => groups[this.trayOf(f)].push(f));
     const TILES = [['suppliers', 'cert', 'Supplier files', 'Certificates, supplier list, invoices', 'ink'], ['products', 'list', 'Products', 'Recipes and labels', 'ok'], ['site', 'eye', 'Site photos', 'One photo per zone', 'human'], ['company', 'doc', 'Company documents', 'SSM, profile, organisation chart', 'attn']];
@@ -5417,7 +5847,7 @@ class LiveDashboard extends Dashboard {
       const thumbs = h('span', { class: 'tile-thumbs', 'aria-hidden': 'true' }, ...Array.from({ length: Math.min(3, n) }, () => h('i')));
       const t = h('button', { class: 'tile t-' + tone, type: 'button', 'aria-expanded': open === key ? 'true' : 'false' },
         h('span', { class: 'tile-ico', html: icon(ic) }), thumbs, h('b', null, title), h('span', { class: 'tile-sub' }, sub),
-        h('span', { class: 'tile-foot' }, h('span', { class: 'tile-n tnum' }, String(n)), h('span', null, n === 1 ? 'file' : 'files'),
+        h('span', { class: 'tile-foot' }, h('span', { class: 'tile-types' }, ...[...new Set(fs.map(f => (f.filename.split('.').pop() || '').toLowerCase()))].map(e => h('span', { class: 'tile-ext ext-' + e }, e.toUpperCase()))),
           h('span', { class: 'tile-ok', html: n ? icon('done') + (fs.every(f => f.category) ? 'Sorted' : 'In the pile') : '' })));
       t.addEventListener('click', () => {
         if (this.openTile === key) { this.openTile = null; list.hidden = true; this.syncInput(); return; }
@@ -5461,7 +5891,7 @@ class LiveDashboard extends Dashboard {
         const certFile = i.cert_file_id && s.files.find(f => f.id === i.cert_file_id);
         html.push(head('cert', i.name, (i.supplier_name || 'No supplier on file') + (i.source === 'found_on_site' ? ', found on site' : '')),
           boxes(['Result', ST_TEXT[i.status] || i.status, ST_RESULT[i.status] === 'ok' ? 'ok' : ST_RESULT[i.status] === 'warn' ? 'warn' : 'bad'], ['Valid until', i.expiry_date ? niceDate(i.expiry_date) : '—']),
-          i.cert_checks ? h('span', { class: 'mono-l sec' }, (i.cert_checks.filter(c => c.ok).length) + ' of ' + i.cert_checks.length + ' checks passed') : null,
+          i.cert_checks ? h('span', { class: 'mono-l sec' }, (i.cert_checks.filter(isOk).length) + ' of ' + i.cert_checks.length + ' checks passed') : null,
           i.cert_checks ? checkList(i.cert_checks) : null,
           h('span', { class: 'mono-l sec' }, 'Certificate'),
           grid([['Brand', i.brand || '—'], ['Certificate no.', i.cert_number || '—'], ['Issued by', i.status === 'unclear' ? 'Unreadable' : (i.issuer || '—'), true], ['Used in', (i.products || []).join(', ') || '—', true], ['Tool', 'check_certificate'], ['File', certFile ? certFile.filename : 'None on file', true]]));
@@ -5471,7 +5901,7 @@ class LiveDashboard extends Dashboard {
         const z = s.site.zones.find(x => x.zone === m.zone.zone) || m.zone;
         const last = z.findings.filter(f => f.checks).pop();
         const zc = (last && last.checks) || [];
-        html.push(head('eye', ZONE_LABEL[z.zone], 'Zone photo, checked by the On-site Inspector'), boxes(['Result', bad ? 'Fix needed' : 'Clear', bad ? 'bad' : 'ok'], ['Checks', zc.filter(c => c.ok).length + ' / ' + zc.length]),
+        html.push(head('eye', ZONE_LABEL[z.zone], 'Zone photo, checked by the On-site Inspector'), boxes(['Result', bad ? 'Fix needed' : 'Clear', bad ? 'bad' : 'ok'], ['Checks', zc.filter(isOk).length + ' / ' + zc.length]),
           checkList(zc), bad ? h('span', { class: 'mono-l sec' }, 'Proposed next step') : null, bad ? this.stepBox(this.zoneStep(z)) : null,
           h('button', { class: 'btn btn-ink btn-sm dbtn', type: 'button', onclick: () => this.openEvidence('zone:' + z.zone) }, icon('eye'), 'See the photo'));
       } else if (m.kind === 'doc' || m.kind === 'review') {
@@ -5495,7 +5925,7 @@ class LiveDashboard extends Dashboard {
       const backend = AG_BACK[id];
       const mine = backend ? s.tasks.filter(t => t.assignee === backend) : [];
       const checked = s.tasks.some(t => t.assignee === 'certificate_checker' && t.status === 'done') ? s.ingredients.length : s.ingredients.filter(i => i.cert_id).length;
-      const prog = { checker: [checked, s.ingredients.length], inspector: [s.site.zones.filter(z => z.status !== 'unchecked').length, 5], writer: [s.documents.length, 3], auditor: [s.documents.filter(d => d.status !== 'draft').length, 3], pack: [this.filesReady, 6] }[id] || (mine.length ? [mine.filter(t => t.status === 'done').length, mine.length] : null);
+      const prog = { checker: [checked, s.ingredients.length], inspector: [s.site.zones.filter(z => z.status !== 'unchecked').length, s.site.zones.length], writer: [s.documents.length, 3], auditor: [s.documents.filter(d => d.status !== 'draft').length, 3], pack: [this.filesReady, 6] }[id] || (mine.length ? [mine.filter(t => t.status === 'done').length, mine.length] : null);
       const firstEv = this.log.find(e => e.agent === id);
       const recent = this.log.filter(e => e.agent === id).slice(-3).reverse();
       html = [
@@ -5503,6 +5933,7 @@ class LiveDashboard extends Dashboard {
           h('div', null, h('b', null, a.human ? 'Mak Teh (you)' : a.name), h('span', { class: 'dsub mono' }, a.human ? 'Owner, approves the plan and messages' : 'workbuddy/sub-agent/' + (AGENT_SLUG[id] || id)))),
         boxes(['Status', STATE_LABEL[st], st === 'waiting' ? 'warn' : st === 'flag' ? 'bad' : st === 'done' ? 'ok' : st === 'working' ? 'ink' : ''], ['Progress', prog ? prog[0] + ' / ' + prog[1] : '—']),
         h('p', { class: 'dnow' }, this.status[id] || ''),
+        ...(id === 'inspector' && s.site.zones.some(z => z.status !== 'unchecked') ? [h('span', { class: 'mono-l sec' }, 'Zone by zone'), zoneSummary(s.site.zones, z => this.openEvidence('zone:' + z.zone))] : []),
         ...(steps => steps.length ? [h('span', { class: 'mono-l sec' }, 'Proposed next step'), ...steps.map(st => this.stepBox(st))] : [])(this.nextSteps(id)),
         h('span', { class: 'mono-l sec' }, 'Run details'),
         grid([['Tools', (LIVE_TOOLS[id] || (id === 'owner' ? ['approvals in the dashboard'] : id === 'pack' ? ['assemble_pack'] : [])).join(', '), true],
@@ -5545,11 +5976,11 @@ class LiveDashboard extends Dashboard {
       const i = s.ingredients.find(x => String(x.id) === ref); if (!i) return;
       const f = i.cert_file_id && s.files.find(x => x.id === i.cert_file_id);
       checks = i.cert_checks || [];
-      const failed = checks.filter(c => !c.ok);
+      const failed = checks.filter(c => !isOk(c));
       kicker = ST_RESULT[i.status] === 'ok' ? 'Checked' : 'Problem';
       title = i.name + ': ' + (ST_TEXT[i.status] || i.status).toLowerCase();
       if (f) {
-        src = marked(fileUrl(f.id), checks.map(c => ({ box: c.box, key: c.key, tone: c.ok ? 'ok' : 'bad' })), f.filename);
+        src = marked(fileUrl(f.id), checks.map(c => ({ box: c.box, key: c.key, tone: isOk(c) ? 'ok' : 'bad' })), f.filename);
         src.classList.add(failed.length ? 'show-bad' : 'show-none');
         caption = f.filename + (failed.length ? ', the field in red' : '');
       }
@@ -5563,9 +5994,11 @@ class LiveDashboard extends Dashboard {
       checks = last.checks || [];
       const photo = (last.photo_file_id && s.files.find(f => f.id === last.photo_file_id)) || s.files.find(f => f.zone === ref);
       kicker = z.status === 'issue' ? 'Problem' : 'Checked';
-      title = ZONE_LABEL[ref] + (z.status === 'issue' ? ': fix needed' : ': all checks passed');
-      if (photo) {
-        src = marked(fileUrl(photo.id), checks.filter(c => !c.ok).map(c => ({ box: c.box })), photo.filename);
+      const missing = checks.some(c => stateOf(c) === 'missing');
+      title = ZONE_LABEL[ref] + (missing ? ': no photo yet' : z.status === 'issue' ? ': fix needed' : ': all checks passed');
+      if (missing) src = h('p', { class: 'evd-none' }, '○  No photo of the ' + ZONE_LABEL[ref].toLowerCase() + ' yet.');
+      else if (photo) {
+        src = marked(fileUrl(photo.id), checks.filter(c => !isOk(c)).map(c => ({ box: c.box, tone: stateOf(c) === 'warn' ? 'warn' : 'bad' })), photo.filename);
         caption = photo.filename;
       }
       row('Checked by', 'On-site Inspector <span class="tool">check_zone</span>');
@@ -5574,7 +6007,7 @@ class LiveDashboard extends Dashboard {
     } else return;
     wrap.append(h('div', { class: 'evd-src' }, src || h('p', { class: 'evd-none' }, 'No file on record')),
       caption ? h('p', { class: 'evd-cap', html: icon('eye') + '<span>' + esc(caption) + '</span>' }) : null,
-      checks.length ? h('span', { class: 'mono-l sec' }, checks.filter(c => c.ok).length + ' of ' + checks.length + ' checks passed') : null,
+      checks.length ? h('span', { class: 'mono-l sec' }, checks.filter(isOk).length + ' of ' + checks.length + ' checks passed') : null,
       checks.length ? checkList(checks, src) : null, rows);
     this.openDrawer(kicker, title, wrap);
   }
@@ -5592,7 +6025,8 @@ class LiveDashboard extends Dashboard {
     this.pkDownload = h('a', { class: 'btn btn-line btn-sm fb-dl', href: '/business/' + LIVE_BIZ + '/pack/download', hidden: true }, icon('folder'), 'Download the pack');
     const side = h('aside', { class: 'fb-side' },
       h('div', { class: 'fb-root' }, h('span', { class: 'fb-chev', html: icon('back') }), h('span', { class: 'fb-fold', html: icon('folder') }), h('span', null, 'MakTehSambal_ApplicationPack')),
-      this.pkList, this.pkTodoBox, this.pkDownload,
+      this.pkScore = h('button', { class: 'pk-score', type: 'button', hidden: true, onclick: () => this.showFile('chk') }),
+      this.pkScore, this.pkList, this.pkTodoBox, this.pkDownload,
       h('p', { class: 'fb-note' }, 'WorkBuddy writes these files to your shared folder. You submit on MYeHALAL yourself.'));
     this.pkCrumb = h('span', { class: 'fb-crumb-f' }, '');
     const head = h('div', { class: 'fb-bar' },
@@ -5635,11 +6069,19 @@ class LiveDashboard extends Dashboard {
   }
   syncPackFiles() {
     if (!this.snap) return;
-    LIVE_FILES.forEach(f => { const b = this.fileBtns[f.id], ok = this.fileReady(f.id); b.dataset.state = ok ? 'ready' : 'pending'; b.querySelector('.pk-st').textContent = ok ? 'Ready' : 'Waiting'; });
+    LIVE_FILES.forEach(f => { const b = this.fileBtns[f.id], ok = this.fileReady(f.id), st = ok ? this.fileStatus(f.id) : ['Waiting', 'wait']; b.dataset.state = ok ? 'ready' : 'pending'; const el = b.querySelector('.pk-st'); el.textContent = st[0]; el.dataset.tone = st[1]; });
     const pk = this.snap.pack, cb = this.fileBtns.chk;
     Object.keys(this.followUps || {}).forEach(k => { const it = pk.sections.flatMap(x => x.items).find(x => x.key === k); if (it && it.status === 'ready') delete this.followUps[k]; });
     cb.dataset.state = pk.latest_pack ? 'ready' : 'pending';
-    cb.querySelector('.pk-st').textContent = pk.latest_pack ? Math.round(this.snap.overview.readiness.score) + '%' : 'Waiting';
+    const r = this.snap.overview.readiness, open = pk.items_total - pk.items_ready;
+    cb.querySelector('.pk-st').textContent = pk.latest_pack ? (open ? open + ' open' : 'All ready') : 'Waiting';
+    cb.querySelector('.pk-st').dataset.tone = pk.latest_pack ? (open ? 'attn' : 'ok') : 'wait';
+    this.pkScore.hidden = !pk.latest_pack;
+    if (pk.latest_pack) {
+      const RC = 2 * Math.PI * 20;
+      this.pkScore.innerHTML = '<span class="rc-ring sm"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" class="sr-bg"/><circle cx="24" cy="24" r="20" class="sr-fg" stroke="url(#hr-ring)" stroke-dasharray="' + RC.toFixed(1) + '" stroke-dashoffset="' + (RC * (1 - r.score / 100)).toFixed(1) + '" transform="rotate(-90 24 24)"/></svg><b class="tnum">' + r.score + '</b></span>'
+        + '<span class="pk-score-t"><b>' + r.score + '% ready</b><span>' + pk.items_ready + ' of ' + pk.items_total + ' items · ' + (open ? open + ' open' : 'nothing open') + '</span></span>';
+    }
     this.pkHeadTotal.textContent = ' of ' + pk.items_total + ' items ready';
     this.pkTodo.innerHTML = '';
     pk.missing.forEach(m => {
@@ -5651,6 +6093,18 @@ class LiveDashboard extends Dashboard {
     this.pkDownload.hidden = !this.snap.overview.latest_pack;
   }
   showFile(id) { this.pkFile = id; this.pkSub = 0; this.renderPack(); }
+  /* what is in each file, in two words: [text, tone] */
+  fileStatus(id) {
+    const s = this.snap, pk = s.pack;
+    const docSt = d => ({ draft: ['Draft', 'wait'], pending_approval: ['To approve', 'attn'], approved: ['Approved', 'ok'], rejected: ['Changes asked', 'attn'] }[d.status] || ['Draft', 'wait']);
+    if (id === 'f1') return pk.missing.length ? [pk.missing.length + ' open', 'attn'] : ['Complete', 'ok'];
+    if (id === 'f2') { const n = s.ingredients.length, ok = s.ingredients.filter(i => ST_RESULT[i.status] === 'ok').length; return [ok + ' of ' + n + ' valid', ok === n ? 'ok' : 'attn']; }
+    if (id === 'f3') return docSt(s.documents.find(d => d.doc_type === 'halal_policy') || {});
+    if (id === 'f4') { const ds = s.documents.filter(d => d.doc_type !== 'halal_policy'), ok = ds.filter(d => d.status === 'approved').length; return ok === ds.length ? ['Approved', 'ok'] : [(ds.length - ok) + ' to approve', 'attn']; }
+    if (id === 'f5') { const n = s.site.zones.filter(z => z.status === 'issue').length; return n ? [n + ' to fix', 'attn'] : ['All clear', 'ok']; }
+    if (id === 'f6') { const m = s.approvals.filter(a => a.kind === 'message'), sent = m.filter(a => a.status === 'sent' || a.status === 'replied').length; return sent ? [sent + ' sent', 'ok'] : m.length ? ['Draft', 'attn'] : ['None', 'wait']; }
+    return ['Ready', 'ok'];
+  }
   /* the output: readiness score and a checklist per section; every open row has its follow-up */
   renderChecklist() {
     const s = this.snap, v = this.pkView;
@@ -5669,7 +6123,8 @@ class LiveDashboard extends Dashboard {
       const ev = it.key.startsWith('cert:') ? 'ing:' + it.key.slice(5) : it.key.startsWith('zone:') ? it.key : null;
       if (it.status !== 'ready' && (it.key.startsWith('cert:') || (it.key.startsWith('zone:') && /^open/.test(it.reason || '')))) {
         const zone = it.key.startsWith('zone:'), ing = ingOf(it.key);
-        out.push(this.uploadBtn(it.key, zone ? 'Upload new photo' : ing && ing.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', zone ? 'On-site Inspector' : 'Certificate Checker'));
+        const noPhoto = zone && zoneChecks(s.site.zones.find(z => 'zone:' + z.zone === it.key) || {}).some(c => stateOf(c) === 'missing');
+        out.push(this.uploadBtn(it.key, zone ? (noPhoto ? 'Upload a photo' : 'Upload new photo') : ing && ing.status === 'expired' ? 'Upload renewed certificate' : 'Upload certificate', zone ? 'On-site Inspector' : 'Certificate Checker'));
       }
       if (it.key.startsWith('doc:') && it.status !== 'ready' && it.document_id) {
         const ap = s.approvals.find(a => a.kind === 'document' && a.document_id === it.document_id && a.status === 'pending');
@@ -5692,7 +6147,8 @@ class LiveDashboard extends Dashboard {
         h('h3', null, h('span', null, sec.title.replace(/^\d+\.\s*/, '')), h('span', { class: 'rc-n tnum' }, sec.items.filter(i => i.status === 'ready').length + ' / ' + sec.items.length)),
         h('ul', null, ...sec.items.map(it => h('li', { class: 'rc-row ' + (it.status === 'ready' ? 'ok' : 'open') },
           h('span', { class: 'ck-i', html: icon(it.status === 'ready' ? 'check' : 'alert') }),
-          h('div', { class: 'rc-t' }, h('b', null, it.label.replace(/^Site self-check: (\w)/, (_, c) => 'Premises: ' + c.toUpperCase())), h('span', null, (it.status === 'ready' ? (it.note || 'Ready') : (it.reason || 'Missing')).replace(/\d{4}-\d{2}-\d{2}/g, d => niceDate(d)).replace(/^expires/, 'Valid until'))),
+          it.key.startsWith('zone:') ? (z => h('div', { class: 'rc-t' }, h('b', null, ZONE_LABEL[z.zone]), z.status === 'unchecked' ? h('span', null, 'Not checked yet') : h('span', { class: 'rc-z' }, ...zoneChecks(z).map(zoneLine))))(s.site.zones.find(z => 'zone:' + z.zone === it.key) || { zone: it.key.slice(5), status: 'unchecked' })
+            : h('div', { class: 'rc-t' }, h('b', null, it.label), h('span', null, (it.status === 'ready' ? (it.note || 'Ready') : (it.reason || 'Missing')).replace(/\d{4}-\d{2}-\d{2}/g, d => niceDate(d)).replace(/^expires/, 'Valid until'))),
           h('div', { class: 'rc-a' }, ...action(it)))))))));
   }
   renderPack() {
@@ -5733,14 +6189,14 @@ class LiveDashboard extends Dashboard {
     } else if (f.id === 'f5') {
       const rows = s.site.zones.map(z => { const open = z.findings.filter(x => x.severity !== 'ok'); return { cls: z.status === 'issue' ? 'bad' : '', cells: [ZONE_LABEL[z.zone], (open.length ? open : z.findings).map(x => x.title).join('; ') || 'Not checked', z.status === 'clear' ? res('OK', 'ok') : z.status === 'issue' ? res('Fix', 'bad') : res('Open', 'bad'), open.length ? 'Remove it, or declare it with a certificate' : '', open.length ? 'Mak Teh' : ''] }; });
       const photo = s.files.find(x => x.zone === 'store');
-      body = [tool([h('b', null, 'Tracker')], [pill('5 zones'), pill(s.site.zones.filter(z => z.status === 'issue').length + ' open')]),
+      body = [tool([h('b', null, 'Tracker')], [pill(s.site.zones.length + ' zones'), pill(s.site.zones.filter(z => z.status === 'issue').length + ' open')]),
         sheet(['Zone', 'What the photo shows', 'Result', 'Fix', 'Owner'], ['18%', '40%', '10%', '22%', '10%'], rows, ['Tracker', 'Photos']),
         photo ? h('figure', { class: 'vw-fig' }, h('img', { class: 'evd-img', src: fileUrl(photo.id), alt: 'Store photo' }), h('figcaption', null, 'Photo attached to the store row: ' + photo.filename)) : null];
     } else if (f.id === 'f1') {
       const pk = s.pack, r = s.overview.readiness;
       const page = h('article', { class: 'pg' }, letter('Ref. MTS/HR/2026/01'),
         h('h1', null, 'Halal certification readiness report'),
-        h('dl', { class: 'pg-meta' }, ...[['Prepared', DATE + (s.overview.latest_pack ? ', ' + liveTime(s.overview.latest_pack.created_at).slice(0, 5) : '')], ['Prepared by', 'HalalReady, Coordinator agent'], ['For', 'Mak Teh, Managing Director']].map(([k, x]) => h('div', null, h('dt', null, k), h('dd', null, x)))),
+        h('dl', { class: 'pg-meta' }, ...[['Prepared', DATE + (s.overview.latest_pack ? ', ' + liveTime(s.overview.latest_pack.created_at).slice(0, 5) : '')], ['Prepared by', 'Halalah, Coordinator agent'], ['For', 'Mak Teh, Managing Director']].map(([k, x]) => h('div', null, h('dt', null, k), h('dd', null, x)))),
         h('h2', null, '1. Summary'),
         h('p', null, s.overview.status_sentence + ' Readiness: ' + r.score + '% (' + r.done + ' of ' + r.total + ' items).'),
         h('h2', null, '2. Requirements by area'),
@@ -5749,7 +6205,7 @@ class LiveDashboard extends Dashboard {
             h('td', null, g.items.filter(i => i.status !== 'ready').map(i => i.label).join('; ') || '—'))))),
         h('h2', null, '3. Actions before submission'),
         h('ol', null, ...(pk.missing.length ? pk.missing.map(m => h('li', null, m.label + ': ' + (m.reason || 'missing'))) : [h('li', null, 'Nothing open.')])),
-        h('footer', { class: 'pg-foot' }, h('span', null, 'Prepared with HalalReady. Certification decisions rest with JAKIM.'), h('span', null, 'Page 1 of 1')));
+        h('footer', { class: 'pg-foot' }, h('span', null, 'Prepared with Halalah. Certification decisions rest with JAKIM.'), h('span', null, 'Page 1 of 1')));
       body = [tool([h('b', null, 'Readiness Report')], [pill('100%'), pill('1 page')]), h('div', { class: 'pg-desk' }, page)];
     } else if (f.id === 'f3') {
       const doc = s.documents.find(d => d.doc_type === 'halal_policy');
@@ -5829,6 +6285,12 @@ class LiveDashboard extends Dashboard {
     });
     const end = $('.dt-end', this.root);
     end.insertBefore(reset, end.children[1] || null);
+    /* presenter: the right arrow moves the run on to its next step (nothing on screen) */
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.repeat) return;
+      if (!this.root.isConnected || this.host.hidden || (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]'))) return;
+      livePost('/demo/next').catch(() => {});
+    });
   }
 
   /* ---------- the graph: no Auditor, and the pack is the output step, not a node ---------- */
@@ -5841,6 +6303,14 @@ class LiveDashboard extends Dashboard {
     this.gLinks.append(l);
     this.links.push({ a: 'coord', b: 'renewal', el: l });
     this.baseLinks.renewal = l;
+  }
+  anchor(id) { return LIVE_ANCHOR[id]; }
+  /* placeholders need a count up front: certificates to check and zones to inspect come from the snapshot */
+  expectedDots(id) {
+    const s = this.snap; if (!s) return 0;
+    if (id === 'checker') return s.ingredients.filter(i => i.cert_id || i.proof_type === 'halal_certificate').length;
+    if (id === 'inspector') return s.site.zones.length;
+    return 0;
   }
   layout() {
     const W = this.gWrap.clientWidth, H = this.gWrap.clientHeight;
@@ -5872,7 +6342,7 @@ function openDemo() {
   view.hidden = false;
   document.body.classList.add('is-demo');
   if (embedDash) embedDash.pause();
-  if (!fullDash) fullDash = new (/[?&]scripted(&|=|$)/.test(location.search) ? Dashboard : LiveDashboard)(view, {});
+  if (!fullDash) fullDash = new LiveDashboard(view, {});
   requestAnimationFrame(() => fullDash.setTab(fullDash.tab, true));
 }
 function closeDemo() {
@@ -5913,6 +6383,7 @@ function boot() {
   initPreview();
   initRoll();
   initProblemStamps();
+  initGroups();
   initFlow();
   initRoster();
   initEvidence();

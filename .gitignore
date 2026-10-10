@@ -1,1 +1,34 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Database and uploads
+*.db
+*.sqlite3
+backend/uploads/
+
+# Agent file-reading cache and demo snapshots (rebuilt locally)
+.cache/
+snapshots/
+demo_case/archive/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
 dist/
+build/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

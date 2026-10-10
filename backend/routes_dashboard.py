@@ -718,6 +718,73 @@ async def list_files(business_id: int, category: Optional[str] = None):
         return await fetch_all(db, "SELECT * FROM files WHERE business_id = ? ORDER BY id", (business_id,))
 
 
+def _thumbnail(path, filename: str):
+    """A small JPEG of a file: photos shrunk, a scanned PDF's page image, a drawn grid of a sheet's first rows."""
+    import io
+    import re as _re
+    from PIL import Image, ImageDraw, ImageFont
+    name = filename.lower()
+    img = None
+    if name.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp")):
+        img = Image.open(path)
+    elif name.endswith(".pdf"):
+        data = path.read_bytes()
+        m = _re.search(rb"/DCTDecode.*?stream\r?\n", data, _re.S)
+        if m:
+            end = data.find(b"endstream", m.end())
+            img = Image.open(io.BytesIO(data[m.end():end]))
+    elif name.endswith(".xlsx"):
+        from openpyxl import load_workbook
+        rows = [["" if v is None else str(v) for v in r][:4]
+                for r in load_workbook(path, read_only=True, data_only=True).worksheets[0].iter_rows(max_row=9, values_only=True)]
+        img = Image.new("RGB", (360, 470), "white")
+        d = ImageDraw.Draw(img)
+        try:
+            font = ImageFont.truetype("arial.ttf", 13)
+            bold = ImageFont.truetype("arialbd.ttf", 13)
+        except OSError:
+            font = bold = ImageFont.load_default()
+        d.rectangle([0, 0, 360, 34], fill=(33, 115, 70))
+        d.text((12, 10), filename[:40], font=bold, fill="white")
+        for i, row in enumerate(rows):
+            y = 46 + i * 44
+            if i == 0:
+                d.rectangle([0, y - 6, 360, y + 30], fill=(236, 244, 239))
+            for k, cell in enumerate(row):
+                d.text((10 + k * 88, y + 4), cell[:11], font=bold if i == 0 else font, fill=(30, 30, 34))
+            d.line([0, y + 30, 360, y + 30], fill=(220, 220, 226))
+        for k in range(1, 4):
+            d.line([k * 88 + 2, 40, k * 88 + 2, 470], fill=(230, 230, 234))
+    if img is None:
+        return None
+    img = img.convert("RGB")
+    img.thumbnail((360, 480))
+    out = io.BytesIO()
+    img.save(out, "JPEG", quality=78)
+    return out.getvalue()
+
+
+@router.get("/files/{file_id}/thumb")
+async def file_thumb(file_id: int):
+    """A small picture of the file for the Input step; 404 when there is nothing to show (the page draws an icon)."""
+    from fastapi.responses import Response
+    async with connect() as db:
+        f = await fetch_one(db, "SELECT * FROM files WHERE id = ?", (file_id,))
+    if not f or not pack.file_path(f).exists():
+        raise HTTPException(404, "File not found")
+    cache = UPLOAD_DIR / "thumbs" / f"{file_id}.jpg"
+    if not cache.exists():
+        try:
+            data = _thumbnail(pack.file_path(f), f["filename"])
+        except Exception:
+            data = None
+        if not data:
+            raise HTTPException(404, "No picture for this file")
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_bytes(data)
+    return Response(cache.read_bytes(), media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
+
+
 @router.get("/files/{file_id}/sheet")
 async def file_sheet(file_id: int, limit: int = 60):
     """The first sheet of an .xlsx file as rows, for the file viewer."""

@@ -43,6 +43,10 @@ BUSINESS_ID = int(os.getenv("BUSINESS_ID", "1"))
 TOKEN = os.getenv("CONNECTOR_TOKEN") or ""
 HEARTBEAT = ROOT / ".cache" / "runner.json"
 PACE = float(os.getenv("DEMO_PACE", "1.8"))   # stretches every thinking pause; 1.8 gives about 1:45 of agent work
+# Presenter steps: the run holds before each reveal until the presenter presses the right arrow (POST /demo/next).
+#   1: the Coordinator's plan   2: the expired certificate   3: the Inspector's findings
+# A press before the hold is reached skips the waiting on the way there. DEMO_STEPS=0 plays straight through.
+STEPS = os.getenv("DEMO_STEPS", "1") != "0"
 CASE = json.loads((ROOT / "demo_case" / "case.json").read_text(encoding="utf-8"))
 
 log = logging.getLogger("scripted")
@@ -74,6 +78,12 @@ class Run:
         self.main_done: set[str] = set()
         self.pack_built = False
         self.active: set[str] = set()   # agents mid-way through their main task
+        self.workers: set[asyncio.Task] = set()
+        self.run_sig = None              # the first task of the current run; changes when the case is reset
+        self.presses = None              # the presenter's right-arrow count when we last looked
+        self.allowed = 0                 # holds the presenter has released
+        self.next_hold = 1               # the next hold on the way
+        self.owner_busy = False          # a decision is open (plan, blocker): presses are ignored
 
     # ── backend ──────────────────────────────────────────────────────
     async def call(self, method: str, path: str, body: dict | None = None, params: dict | None = None,
@@ -118,9 +128,33 @@ class Run:
         while left > 0:
             if pausable and not self.resume.is_set():
                 await self.resume.wait()
+            if pausable and STEPS and self.allowed >= self.next_hold:
+                return
             step = min(0.2, left)
             await asyncio.sleep(step)
             left -= step
+
+    async def hold(self, n: int):
+        """Wait here until the presenter presses the right arrow for step n."""
+        if not STEPS:
+            return
+        while self.allowed < n:
+            await asyncio.sleep(0.2)
+        self.next_hold = max(self.next_hold, n + 1)   # steps are released strictly in order: 1, 2, 3
+
+    async def read_presses(self):
+        try:
+            n = (await self.call("GET", "/demo/next"))["count"]
+        except Exception:
+            return
+        if self.presses is None:
+            self.presses = n
+        for _ in range(max(0, n - self.presses)):
+            # one press releases the next hold; none while a decision is open, and they never pile up
+            if not self.owner_busy and self.resume.is_set() and self.allowed < self.next_hold:
+                self.allowed = self.next_hold
+                log.info("Presenter: step %d", self.allowed)
+        self.presses = n
 
     # ── the board ────────────────────────────────────────────────────
     async def loop(self):
@@ -128,11 +162,20 @@ class Run:
         while True:
             self.heartbeat()
             try:
-                tasks = [t for t in await self.call("GET", f"/business/{BUSINESS_ID}/tasks") if t["status"] != "done"]
+                every = await self.call("GET", f"/business/{BUSINESS_ID}/tasks")
             except Exception as exc:
                 log.warning("Backend not reachable: %s", exc)
                 await asyncio.sleep(2)
                 continue
+            # The case was reset (the first task is gone or new): stop everything from the old run.
+            first = min(every, key=lambda t: t["id"]) if every else None
+            sig = (first["id"], first["created_at"]) if first else None
+            if sig != self.run_sig:
+                if self.run_sig is not None:
+                    self.forget()
+                self.run_sig = sig
+            tasks = [t for t in every if t["status"] != "done"]
+            await self.read_presses()
             for t in sorted(tasks, key=lambda t: t["id"]):
                 key = f"{t['id']}:{t['created_at']}"
                 if key in self.handled:
@@ -140,8 +183,21 @@ class Run:
                 handler = self.route(t)
                 if handler:
                     self.handled.add(key)
-                    asyncio.create_task(self.guard(handler, t))
+                    w = asyncio.create_task(self.guard(handler, t))
+                    self.workers.add(w)
+                    w.add_done_callback(self.workers.discard)
             await asyncio.sleep(0.5)
+
+    def forget(self):
+        log.info("The case was reset; stopping %d agent task(s) from the old run", len(self.workers))
+        for w in list(self.workers):
+            w.cancel()
+        self.workers.clear()
+        self.main_done.clear()
+        self.active.clear()
+        self.pack_built = False
+        self.resume.set()
+        self.allowed, self.next_hold, self.owner_busy = 0, 1, False
 
     def heartbeat(self):
         try:
@@ -155,6 +211,8 @@ class Run:
         try:
             await self.pick(task["assignee"])
             await handler(task)
+        except asyncio.CancelledError:
+            log.info("%s stopped: the case was reset", handler.__name__)
         except Exception:
             log.exception("%s failed on task %s", handler.__name__, task["id"])
 
@@ -219,10 +277,12 @@ class Run:
         await self.think(0.8)
         await self.event("coordinator", "Planning the run", "action")
         await self.think(2.0)
+        await self.hold(1)
         await self.propose()
         await self.complete(task, "Plan proposed")
 
     async def propose(self, note: str | None = None):
+        self.owner_busy = True
         summary = ("I sorted your 16 files: 2 products, 6 ingredients, 5 suppliers and 5 zone photos. Three agents "
                    "will work in parallel on the certificates, the premises photos and your halal documents. "
                    "I will stop and ask you if anything needs your decision.")
@@ -249,7 +309,7 @@ class Run:
         readiness = (await self.call("GET", "/agent/case", params={"business_id": BUSINESS_ID}))["readiness"]
         await self.call("POST", "/agent/status", {"business_id": BUSINESS_ID, "sentence":
                         f"{readiness['score']}% ready. Cooking oil needs Minyak Murni's renewed certificate, the "
-                        "store needs a new photo, and 3 documents are waiting for your approval."})
+                        "cleaning area needs a new photo, and 3 documents are waiting for your approval."})
         pack = await self.call("POST", "/agent/pack", params={"business_id": BUSINESS_ID})
         await self.event("coordinator", f"Application pack ready: {pack['items_ready']} of {pack['items_total']} items",
                          "ok", message="The open items are highlighted on your checklist, each with what to do next.")
@@ -311,6 +371,7 @@ class Run:
         return checks, sum(1 for x in checks if x["ok"])
 
     async def checker_run(self, task: dict):
+        self.owner_busy = False   # the plan was approved
         self.active.add("certificate_checker")
         await self.event("certificate_checker", "On it: Checking 6 ingredients and 5 certificates", "action")
         await self.think(1.2)
@@ -331,8 +392,10 @@ class Run:
             if not f:
                 continue
             await self.think(0.8)
+            if c["key"] == "oil":
+                await self.hold(2)
             await self.event("certificate_checker", "Reading " + Path(c["file"]).stem.replace("_", " "), "action")
-            await self.think(2.6)
+            await self.think(1.0 if c["key"] == "oil" else 2.6)
             checks, passed = await self.record(c, f["id"], ings, today)
             what = " and ".join(c["ingredients"])
             what = what[0] + what[1:].lower()
@@ -378,7 +441,6 @@ class Run:
         c = next(x for x in CASE["certificates"] if x["key"] == "oil")
         contact = next(s for s in CASE["suppliers"] if s[0] == c["supplier"])[1]
         if choice in CHANNEL_NAME:
-            await self.think(0.8, pausable=False)
             await self.task("certificate_checker", "supplier_chaser",
                             f"Ask {c['supplier']} for the renewed oil certificate",
                             f"Minyak Murni’s oil certificate expired on {c['expiry']}. Can you draft "
@@ -419,7 +481,7 @@ class Run:
         c = next(x for x in CASE["certificates"] if x["key"] == "oil")
         contact = next(s for s in CASE["suppliers"] if s[0] == c["supplier"])[1]
         await self.event("supplier_chaser", f"On it: Writing the {CHANNEL_NAME[channel]} to {contact}", "action")
-        await self.think(3.5, pausable=False)
+        await asyncio.sleep(2.6)   # with the board polling, the draft shows about 3.5 s after the owner's choice
         if channel == "email":
             ms = (f"Subject: Sijil halal minyak masak MURNI yang baharu\n\nAssalamualaikum {contact},\n\n"
                   f"Saya Mak Teh dari Mak Teh Sambal Sdn Bhd. Sijil halal minyak masak sawit MURNI ({c['number']}) "
@@ -463,67 +525,86 @@ class Run:
 
     async def inspector_run(self, task: dict):
         self.active.add("onsite_inspector")
-        await self.event("onsite_inspector", "On it: Checking 5 zone photos", "action")
+        await self.event("onsite_inspector", f"On it: Checking {len(CASE['zones'])} zones", "action")
         await self.think(1.5)
-        for zone in ["processing", "packing", "cleaning", "waste", "store"]:
+        for zone in ["processing", "packing", "store", "waste", "cleaning"]:
             z = CASE["zones"][zone]
+            if zone == "cleaning":
+                await self.hold(3)
+            k = 0.3 if STEPS and zone == "cleaning" else 1   # after step 3: the finding, quickly
             photo = await self.zone_photo(zone)
-            await self.think(0.8)
+            await self.think(0.8 * k)
+            if not photo:
+                await self.event("onsite_inspector", f"Looking for a {z['title'].lower()} photo", "action")
+                await self.think(1.6 * k)
+                await self.call("POST", "/agent/site-findings", {
+                    "business_id": BUSINESS_ID, "zone": zone, "severity": "attention", "title": "No photo yet",
+                    "checks": z["checks"], "suggestion": z["suggestion"]})
+                await self.event("onsite_inspector", f"{zone.title()}: no photo yet", "attention",
+                                 message=z["checks"][0]["detail"])
+                await self.call("POST", "/agent/approvals", {
+                    "business_id": BUSINESS_ID, "kind": "question", "agent": "onsite_inspector",
+                    "title": f"Photo needed: {z['title'].lower()}", "zone": zone, "body_en": z["suggestion"]})
+                continue
             await self.event("onsite_inspector", "Reading " + Path(photo["filename"]).stem.replace("_", " "), "action")
-            await self.think(3.4)
-            failed = [c for c in z["checks"] if not c["ok"]]
-            if not failed:
+            await self.think(3.4 * k)
+            fix = [c for c in z["checks"] if c["state"] != "ok"]
+            if not fix:
                 await self.call("POST", "/agent/site-findings", {
                     "business_id": BUSINESS_ID, "zone": zone, "severity": "ok", "title": "All checks passed",
                     "checks": z["checks"], "photo_file_id": photo["id"]})
-                await self.event("onsite_inspector", f"{zone.title()}: all {len(z['checks'])} checks passed", "ok")
+                await self.event("onsite_inspector", f"{zone.title()}: " + ", ".join(c["label"].lower() for c in z["checks"]), "ok")
                 continue
             await self.call("POST", "/agent/site-findings", {
-                "business_id": BUSINESS_ID, "zone": zone, "severity": "problem",
-                "title": "Undeclared oil brand on the shelf", "detail": failed[0]["detail"],
-                "checks": z["checks"], "suggestion": z["suggestion"], "photo_file_id": photo["id"]})
-            await self.event("onsite_inspector", f"{zone.title()}: undeclared oil brand on the shelf", "problem",
-                             message=failed[0]["detail"])
-            await self.think(1.5)
+                "business_id": BUSINESS_ID, "zone": zone, "severity": "attention", "title": fix[0]["label"],
+                "detail": fix[0]["detail"], "checks": z["checks"], "suggestion": z["suggestion"], "photo_file_id": photo["id"]})
+            await self.event("onsite_inspector", f"{zone.title()}: {fix[0]['label'].lower()}", "attention",
+                             message=f"{fix[0]['detail']} {fix[0]['ask']}.")
+            await self.think(1.2 * k)
             await self.call("POST", "/agent/approvals", {
                 "business_id": BUSINESS_ID, "kind": "question", "agent": "onsite_inspector",
-                "title": "New photo needed: raw material store", "file_id": photo["id"], "zone": zone,
+                "title": f"New photo needed: {z['title'].lower()}", "file_id": photo["id"], "zone": zone,
                 "body_en": z["suggestion"]})
-        await self.complete(task, "5 zones checked, 1 to fix",
-                            reply="4 of 5 zones are clear. The store has an undeclared oil brand; I asked Mak Teh "
-                                  "for a new photo.")
+        n = len(CASE["zones"])
+        await self.complete(task, f"{n} zones checked, 1 needs you",
+                            reply=f"{n - 1} of {n} zones are fine. Cleaning area: detergent next to food, I asked Mak Teh "
+                                  "to move it and send a new photo.")
         self.active.discard("onsite_inspector")
         await self.main_task_done("onsite_inspector")
 
     async def inspector_follow_up(self, task: dict):
         p = task.get("payload") or {}
         file_ids = p.get("file_ids") or []
+        zone = p.get("zone")
+        if not zone:   # an answer on a question card: the zone is on the question
+            a = next((x for x in await self.call("GET", f"/business/{BUSINESS_ID}/approvals")
+                      if x["id"] == p.get("approval_id")), None)
+            zone = (json.loads(a["payload"]) if a and a.get("payload") else {}).get("zone") or "store"
+        z = CASE["zones"][zone]
         if not file_ids:
-            await self.complete(task, "No photo yet", reply=None)
-            await self.event("onsite_inspector", "Store: still needs a new photo", "attention",
-                             message="Thanks. I can only clear the store once I see a new photo of the shelf.")
+            await self.complete(task, "No photo yet")
+            await self.event("onsite_inspector", f"{zone.title()}: still needs a photo", "attention",
+                             message="Thanks. I can only clear it once I see a photo.")
             return
-        zone = p.get("zone") or "store"
         await self.call("POST", f"/agent/files/{file_ids[0]}/sort",
                         {"category": "site", "kind": "photo", "zone": zone, "agent": "onsite_inspector"})
-        await self.event("onsite_inspector", f"On it: Re-checking the {zone} photo", "action")
+        await self.event("onsite_inspector", f"On it: Checking the new {z['title'].lower()} photo", "action")
         await self.think(1.0, pausable=False)
         f = next((x for x in await self.files() if x["id"] == file_ids[0]), {"filename": "new photo"})
         await self.event("onsite_inspector", "Reading " + Path(f["filename"]).stem.replace("_", " "), "action")
         await self.think(3.2, pausable=False)
         site = await self.call("GET", f"/business/{BUSINESS_ID}/site")
-        for finding in next(z for z in site["zones"] if z["zone"] == zone)["findings"]:
+        for finding in next(x for x in site["zones"] if x["zone"] == zone)["findings"]:
             if finding["status"] == "open" and finding["severity"] != "ok":
                 await self.call("PATCH", f"/site-findings/{finding['id']}", {"status": "resolved"})
-        checks = [dict(c, ok=True, box=None) for c in CASE["zones"][zone]["checks"]]
-        checks[0]["detail"] = "Only declared brands on the shelf: MURNI, CILI MAJU, GULA MANIS, BAWANG SEGAR, HASIL LAUT."
+        checks = z.get("after") or [dict(c, state="ok") for c in z["checks"]]
         await self.call("POST", "/agent/site-findings", {
             "business_id": BUSINESS_ID, "zone": zone, "severity": "ok", "title": "All checks passed after the fix",
             "checks": checks, "photo_file_id": file_ids[0]})
-        await self.event("onsite_inspector", f"{zone.title()}: all {len(checks)} checks passed", "ok",
-                         message="The Cap Merpati Hijau tins are gone. Only declared brands are on the shelf.")
-        await self.complete(task, "Store re-checked: clear")
-        await self.coord_update_pack("The store is now clear.")
+        await self.event("onsite_inspector", f"{zone.title()}: " + ", ".join(c["label"].lower() for c in checks), "ok",
+                         message=f"{z['title']} is clear now.")
+        await self.complete(task, f"{zone} re-checked: clear")
+        await self.coord_update_pack(f"The {z['title'].lower()} is clear now.")
 
     # ── Document Writer ──────────────────────────────────────────────
     async def writer_run(self, task: dict):

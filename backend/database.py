@@ -76,7 +76,7 @@ async def connect():
         await db.close()
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 9
 
 
 async def init_db():

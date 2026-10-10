@@ -6,7 +6,7 @@ Generate the files for the scripted demo run (Mak Teh Sambal, fictional).
 Writes demo_case/:
   upload/      the owner's files, dropped in all at once on the Input step
   follow_up/   what the owner uploads later from the output checklist
-               (the renewed oil certificate, a new store photo)
+               (the renewed oil certificate, the cleaning area after the fix)
   case.json    what the scripted agents "read" in each file, with the position
                of every field so the dashboard can point at it
 
@@ -29,6 +29,15 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "demo_case"
 UPLOAD = OUT / "upload"
 FOLLOW = OUT / "follow_up"
+REAL_SITE_PHOTOS = {
+    "12_Photo_store.jpg",
+    "13_Photo_processing.jpg",
+    "14_Photo_packing.jpg",
+    "15_Photo_cleaning.jpg",
+    "16_Photo_waste.jpg",
+}
+REAL_RENEWED_CERT = "Halal_cert_Minyak_Murni_2026.jpg"
+REAL_CLEANING_AFTER = "Photo_cleaning_after.jpg"
 
 FOOTER = "SAMPLE - FICTIONAL"
 TODAY = "2026-10-15"
@@ -198,30 +207,50 @@ def store_photo(fixed: bool) -> Image.Image:
     return img
 
 
+def cleaning_photo(detergent: bool) -> Image.Image:
+    """The cleaning area. detergent=True: a detergent bottle stands on the counter next to a tub of chilli paste."""
+    img = msc.cleaning_photo()
+    if detergent:
+        d = ImageDraw.Draw(img)
+        d.rounded_rectangle([200, 395, 330, 470], 8, fill=(250, 250, 248), outline=(90, 90, 90), width=3)
+        d.rectangle([194, 382, 336, 398], fill=(200, 60, 40))
+        d.text((265, 422), "PES CILI", font=msc.font(20, True), fill=(160, 30, 20), anchor="mm")
+        d.text((265, 448), "untuk masakan", font=msc.font(13), fill=msc.INK, anchor="mm")
+        d.rounded_rectangle([345, 345, 395, 470], 10, fill=(40, 120, 200), outline=(20, 60, 110), width=3)
+        d.rectangle([358, 325, 382, 347], fill=(230, 230, 230), outline=(90, 90, 90), width=2)
+        d.text((370, 390), "SABUN", font=msc.font(12, True), fill="white", anchor="mm")
+        d.text((370, 408), "PINGGAN", font=msc.font(10, True), fill="white", anchor="mm")
+        d.text((370, 432), "Detergent", font=msc.font(10), fill="white", anchor="mm")
+    photo_caption(img, "Site photo: cleaning area, " + ("10 Oct 2026, 09:33" if detergent else "15 Oct 2026, 11:52"))
+    return img
+
+
+def existing_photo(path: Path) -> Image.Image | None:
+    if not path.exists():
+        return None
+    with Image.open(path) as img:
+        return img.convert("RGB").copy()
+
+
 ZONES = {
     "store": {"title": "Raw material store", "checks": [
-        {"label": "Every brand on the shelf is on your ingredient list", "ok": False,
-         "detail": "2 tins of CAP MERPATI HIJAU cooking oil, top shelf on the right. Your ingredient list has MURNI oil only.",
-         "box": [0.665, 0.205, 0.885, 0.43]},
-        {"label": "Raw materials kept off the floor", "ok": True, "detail": "Everything is on the rack or the pallet."},
-        {"label": "No non-halal items stored with ingredients", "ok": True, "detail": "None seen."},
-        {"label": "Containers closed and labelled", "ok": True, "detail": "Sacks, tubs and tins are labelled."}],
-        "suggestion": "Move the 2 Cap Merpati Hijau tins out of the store, or add that oil to your ingredient list "
-                      "with its halal certificate. Then upload a new photo of the same shelf."},
+        {"label": "Items labelled", "state": "ok", "detail": "Every sack, tub and tin is labelled."},
+        {"label": "Stored off the floor", "state": "ok", "detail": "Everything is on the rack or the pallet."}]},
     "processing": {"title": "Processing area", "checks": [
-        {"label": "No non-halal items or utensils", "ok": True, "detail": "Only the sambal ingredients are out."},
-        {"label": "Hygiene sign displayed", "ok": True, "detail": "Hairnet, apron and gloves sign on the wall."},
-        {"label": "Work surfaces clean", "ok": True, "detail": "Clean steel tables."}]},
+        {"label": "Clean surfaces", "state": "ok", "detail": "Clean steel tables, hygiene sign on the wall."}]},
     "packing": {"title": "Packing area", "checks": [
-        {"label": "Labels and batch codes checked", "ok": True, "detail": "'Check label & batch code' sign above the table."},
-        {"label": "Jars closed after filling", "ok": True, "detail": "All 10 jars have lids."},
-        {"label": "No foreign items on the packing table", "ok": True, "detail": "Only Mak Teh jars."}]},
+        {"label": "Jars sealed and coded", "state": "ok", "detail": "All 10 jars have lids; batch code check sign above the table."}]},
     "cleaning": {"title": "Cleaning area", "checks": [
-        {"label": "Chemicals in a closed cabinet, away from food", "ok": True, "detail": "Red cabinet marked 'Cleaning chemicals only'."},
-        {"label": "Hand soap at the sink", "ok": True, "detail": "Soap dispenser next to the sink."}]},
+        {"label": "Detergent next to food", "state": "warn", "ask": "Please move it",
+         "detail": "A bottle of dishwashing detergent stands next to the tub of chilli paste on the counter.",
+         "box": [0.18, 0.25, 0.255, 0.54]},
+        {"label": "Chemicals cabinet closed", "state": "ok", "detail": "Red cabinet marked 'Cleaning chemicals only'."}],
+        "suggestion": "Please move the detergent away from the food, into the chemicals cabinet. Then send a new photo "
+                      "of the counter.",
+        "after": [{"label": "Detergent stored away from food", "state": "ok", "detail": "Nothing but food items on the counter."},
+                  {"label": "Chemicals cabinet closed", "state": "ok", "detail": "Red cabinet marked 'Cleaning chemicals only'."}]},
     "waste": {"title": "Waste area", "checks": [
-        {"label": "Bins have lids and are closed", "ok": True, "detail": "All 3 bins are closed."},
-        {"label": "Waste kept outside production", "ok": True, "detail": "Behind the back door."}]},
+        {"label": "Bins closed", "state": "ok", "detail": "All 3 bins have their lids on, outside the back door."}]},
 }
 
 
@@ -286,6 +315,10 @@ If an ingredient is found not to be halal, every batch that used its lot is iden
 # ── write everything ─────────────────────────────────────────────────
 
 def main():
+    real_site_photos = {name: img for name in REAL_SITE_PHOTOS if (img := existing_photo(UPLOAD / name)) is not None}
+    real_renewed_cert = existing_photo(FOLLOW / REAL_RENEWED_CERT)
+    real_cleaning_after = existing_photo(FOLLOW / REAL_CLEANING_AFTER)
+
     for d in (UPLOAD, FOLLOW):
         d.mkdir(parents=True, exist_ok=True)
         for old in d.glob("*"):
@@ -335,21 +368,30 @@ def main():
         files.append({"filename": name, "category": "suppliers", "kind": "certificate", "supplier": supplier})
         certs.append({"file": name, "key": key, "supplier": supplier, **CERTS[key], "boxes": boxes})
 
-    photos = [("12_Photo_store.jpg", "store", store_photo(False)),
-              ("13_Photo_processing.jpg", "processing", msc.processing_photo()),
-              ("14_Photo_packing.jpg", "packing", msc.packing_photo()),
-              ("15_Photo_cleaning.jpg", "cleaning", msc.cleaning_photo()),
-              ("16_Photo_waste.jpg", "waste", msc.waste_photo())]
+    photos = [("12_Photo_store.jpg", "store", real_site_photos.get("12_Photo_store.jpg") or store_photo(True)),
+              ("13_Photo_processing.jpg", "processing", real_site_photos.get("13_Photo_processing.jpg") or msc.processing_photo()),
+              ("14_Photo_packing.jpg", "packing", real_site_photos.get("14_Photo_packing.jpg") or msc.packing_photo()),
+              ("15_Photo_cleaning.jpg", "cleaning", real_site_photos.get("15_Photo_cleaning.jpg") or cleaning_photo(True)),
+              ("16_Photo_waste.jpg", "waste", real_site_photos.get("16_Photo_waste.jpg") or msc.waste_photo())]
     for k, (name, zone, img) in enumerate(photos):
-        msc.photo_texture(img, 12 + k).convert("RGB").save(UPLOAD / name, "JPEG", quality=84)
+        if name in real_site_photos:
+            img.save(UPLOAD / name, "JPEG", quality=88)
+        else:
+            msc.photo_texture(img, 12 + k).convert("RGB").save(UPLOAD / name, "JPEG", quality=84)
         files.append({"filename": name, "category": "site", "kind": "photo", "zone": zone})
 
     # follow-ups the owner uploads from the output checklist
     img, boxes = certificate("oil_renewed")
-    scan(img, 99, 0.7).save(FOLLOW / "Halal_cert_Minyak_Murni_2026.jpg", "JPEG", quality=86)
-    renewed = {"file": "Halal_cert_Minyak_Murni_2026.jpg", "key": "oil_renewed", "supplier": "Minyak Murni Sdn Bhd",
+    if real_renewed_cert is not None:
+        real_renewed_cert.save(FOLLOW / REAL_RENEWED_CERT, "JPEG", quality=88)
+    else:
+        scan(img, 99, 0.7).save(FOLLOW / REAL_RENEWED_CERT, "JPEG", quality=86)
+    renewed = {"file": REAL_RENEWED_CERT, "key": "oil_renewed", "supplier": "Minyak Murni Sdn Bhd",
                **CERTS["oil_renewed"], "boxes": boxes}
-    msc.photo_texture(store_photo(True), 21).convert("RGB").save(FOLLOW / "Photo_store_after.jpg", "JPEG", quality=84)
+    if real_cleaning_after is not None:
+        real_cleaning_after.save(FOLLOW / REAL_CLEANING_AFTER, "JPEG", quality=88)
+    else:
+        msc.photo_texture(cleaning_photo(False), 21).convert("RGB").save(FOLLOW / REAL_CLEANING_AFTER, "JPEG", quality=84)
 
     case = {"today": TODAY, "company": COMPANY, "suppliers": SUPPLIERS, "ingredients": INGREDIENTS,
             "files": files, "certificates": certs, "renewed_certificate": renewed, "zones": ZONES,

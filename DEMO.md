@@ -9,7 +9,11 @@ The files are in `demo_case/` (regenerate with `scripts/make_demo_case.py`).
 1. One terminal: `.venv\Scripts\python -m uvicorn backend.app:app --port 8010`. Don't run `agents.runner`
    at the same time; it would pick up the same tasks.
 2. Open http://localhost:8010/app/#demo. The small ↻ icon top right starts over (tap twice).
-3. Drop all 16 files from `demo_case/upload/` in at once, then **Analyze**.
+3. Drop all 16 files from `demo_case/upload/` in at once (they show as a pile of documents), then **Analyze**.
+   A flagged agent's details (click its node) always show the proposed next step.
+4. **Press → (right arrow key) to move on.** The run holds before each reveal: → 1 shows the Coordinator's plan,
+   → 2 the expired certificate, → 3 the Inspector's findings. The rest (documents, pack, reminders) finishes on
+   its own. Decisions are always your clicks; → is ignored while one is open. Nothing on screen shows the key.
 
 | You do | The audience sees |
 |---|---|
@@ -18,9 +22,9 @@ The files are in `demo_case/` (regenerate with `scripts/make_demo_case.py`).
 | — | Minyak Murni's oil certificate is expired: the run pauses, the expiry field is boxed in red, 4 of 5 checks |
 | Pick WhatsApp, Telegram or Email | Supplier Chaser writes the message in that channel's style |
 | Send | Marked as sent (nothing leaves the laptop in manual mode); the run resumes |
-| — | Store photo: 2 Cap Merpati Hijau tins boxed; the Inspector suggests the fix and asks for a new photo |
+| — | Inspector, zone by zone: ✓ store, processing, packing, waste; ⚠ cleaning area, detergent next to food (“Please move it”, boxed on the photo) |
 | — | Writer drafts 3 documents; the pack is built; Renewal Watch sets reminders |
-| Application Pack ▸ Readiness checklist | Score and open rows; upload `demo_case/follow_up/` files on the cooking oil and store rows; approve the documents |
+| Application Pack ▸ Readiness checklist | Score and open rows. Upload from `demo_case/follow_up/`: the renewed certificate on Cooking oil, `Photo_cleaning_after.jpg` on Cleaning area; approve the 3 documents |
 
 ## Gemini run
 

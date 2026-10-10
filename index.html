@@ -1059,6 +1059,21 @@ html.no-motion .sb-out, html.no-motion .sb-in, html.no-motion .sc { transform: n
 .gs:hover .sl, .gs.is-sel .sl { fill: var(--text); }
 .gs.is-sel .halo { fill: rgba(18, 160, 90, .2); stroke: var(--ink); stroke-width: 1.2; }
 .gs.is-sel .sq { stroke-width: 2.2; }
+/* drag, hover focus, and placeholders that bloom into results */
+.dash:not(.is-embed) .gn { cursor: grab; touch-action: none; }
+.net.is-dragging, .net.is-dragging .gn { cursor: grabbing; }
+.net .gs, .net .gk { transition: opacity .25s ease; }
+.net.is-focus .gn:not(.is-hl) { opacity: .22; }
+.net.is-focus .gs:not(.is-hl) { opacity: .18; }
+.net.is-focus .gk:not(.is-hl) { opacity: .2; }
+.net.is-focus .gk.is-hl:not(.sat) { stroke: var(--g2); stroke-width: 1.8; }
+.net.is-focus .gs.is-hl .sl { fill: var(--text); }
+.gs.is-pend { pointer-events: none; animation: pend-pulse 1.4s ease-in-out infinite alternate; }
+.gs .pend { fill: #CFCFD8; stroke: #FFFFFF; stroke-width: 1.5; }
+.gk.sat.pend { stroke-dasharray: 2 3; }
+.gs .burst { fill: none; stroke: var(--g2); stroke-width: 1.5; pointer-events: none; }
+.gs .burst.bad { stroke: var(--bad); }
+@keyframes pend-pulse { from { opacity: .3; } to { opacity: .9; } }
 .g-banner {
   position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 3; overflow: hidden;
   display: flex; align-items: center; gap: 12px; width: min(460px, calc(100% - 28px)); padding: 10px 10px 12px 10px;
@@ -3211,8 +3226,13 @@ class Dashboard {
       g.append(svgEl('text', { class: 'gl', y: id === 'coord' ? 46 : 42, 'text-anchor': 'middle' }));
       g.querySelector('.gl').textContent = id === 'owner' ? 'Mak Teh (you)' : a.name;
       const tt = svgEl('title'); tt.textContent = a.name; g.append(tt);
-      g.addEventListener('click', () => this.select(id, true));
+      g.addEventListener('click', () => { if (this.dragMoved) { this.dragMoved = false; return; } this.select(id, true); });
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.select(id, true); } });
+      g.addEventListener('pointerenter', () => { if (!this.drag) this.focusNode(id); });
+      g.addEventListener('pointerleave', () => { if (!this.drag) this.focusNode(null); });
+      g.addEventListener('focus', () => this.focusNode(id));
+      g.addEventListener('blur', () => this.focusNode(null));
+      if (!this.embed) this.enableDrag(id, g);
       this.gNodes.append(g);
       this.G[id] = { id, el: g, x: 0, y: 0, agent: true };
     };
@@ -3430,6 +3450,7 @@ class Dashboard {
     this.state[id] = state;
     const n = this.G && this.G[id];
     if (n) n.el.dataset.state = state;
+    this.syncPending(id);
   }
   segChange(id, from, to) {
     if (!this.segs[id]) return;
@@ -3475,6 +3496,73 @@ class Dashboard {
     this.kick();
   }
   pos(id) { const n = this.G[id]; return n ? { x: n.x, y: n.y } : null; }
+  anchor(id) { return ANCHOR[id]; }
+  /* move an agent and carry its satellites with it */
+  moveNode(id, x, y) {
+    const n = this.G[id], dx = x - n.x, dy = y - n.y;
+    n.x = x; n.y = y;
+    this.sats.filter(s => s.parent === id).forEach(s => { s.x += dx; s.y += dy; });
+    n.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')');
+    this.drawLinks();
+  }
+  /* drag an agent anywhere; on release it springs back to its place */
+  enableDrag(id, g) {
+    const at = ev => { const r = this.svg.getBoundingClientRect(); return { x: (ev.clientX - r.left) * this.W / r.width, y: (ev.clientY - r.top) * this.H / r.height }; };
+    g.addEventListener('pointerdown', ev => {
+      if (ev.button !== 0 || !this.W) return;
+      const n = this.G[id], p = at(ev);
+      this.drag = { id, pid: ev.pointerId, ox: p.x - n.x, oy: p.y - n.y, cx: ev.clientX, cy: ev.clientY, moved: false };
+      this.dragMoved = false;
+      cancelAnimationFrame(this.springRaf);
+      g.setPointerCapture(ev.pointerId);
+    });
+    g.addEventListener('pointermove', ev => {
+      const d = this.drag;
+      if (!d || d.pid !== ev.pointerId) return;
+      if (!d.moved && Math.hypot(ev.clientX - d.cx, ev.clientY - d.cy) < 4) return;
+      if (!d.moved) { d.moved = true; this.svg.classList.add('is-dragging'); }
+      const p = at(ev);
+      this.moveNode(id, Math.max(20, Math.min(this.W - 20, p.x - d.ox)), Math.max(20, Math.min(this.H - 20, p.y - d.oy)));
+    });
+    const end = ev => {
+      const d = this.drag;
+      if (!d || d.pid !== ev.pointerId) return;
+      this.drag = null;
+      this.svg.classList.remove('is-dragging');
+      if (!g.matches(':hover')) this.focusNode(null);
+      if (!d.moved) return;
+      this.dragMoved = true;
+      this.springBack(id);
+    };
+    g.addEventListener('pointerup', end);
+    g.addEventListener('pointercancel', end);
+  }
+  springBack(id) {
+    const n = this.G[id];
+    let vx = 0, vy = 0;
+    const step = () => {
+      const hx = this.anchor(id)[0] * this.W, hy = this.anchor(id)[1] * this.H;
+      if (reduced()) { this.moveNode(id, hx, hy); this.kick(); return; }
+      vx = (vx + (hx - n.x) * .09) * .8; vy = (vy + (hy - n.y) * .09) * .8;
+      if (Math.abs(vx) + Math.abs(vy) < .05 && Math.hypot(hx - n.x, hy - n.y) < .5) { this.moveNode(id, hx, hy); this.kick(); return; }
+      this.moveNode(id, n.x + vx, n.y + vy);
+      this.springRaf = requestAnimationFrame(step);
+    };
+    this.springRaf = requestAnimationFrame(step);
+  }
+  /* hovering an agent lights up its links, its neighbours and its satellites; the rest fades */
+  focusNode(id) {
+    this.focusId = id;
+    this.svg.classList.toggle('is-focus', !!id);
+    const on = new Set(id ? [id] : []);
+    for (const l of this.links) {
+      const hit = !!id && (l.a === id || l.b === id);
+      if (hit) { on.add(l.a); on.add(l.b); }
+      l.el.classList.toggle('is-hl', hit);
+    }
+    NODE_ORDER.forEach(n => this.G[n].el.classList.toggle('is-hl', on.has(n)));
+    for (const s of this.sats) { const hit = s.parent === id; s.el.classList.toggle('is-hl', hit); s.line.classList.toggle('is-hl', hit); }
+  }
   drawLinks() {
     for (const l of this.links) {
       const a = this.pos(l.a), b = this.pos(l.b);
@@ -3548,34 +3636,76 @@ class Dashboard {
     if (a === 'chaser') return { kind: 'msg', label: 'WhatsApp to Encik Razak' };
     return { kind: 'item', label: e.label || e.id };
   }
+  newSat(agent, key, id, instant) {
+    const p = this.G[agent];
+    const k = this.sats.filter(x => x.parent === agent).length;
+    const away = Math.atan2(p.y - this.G.coord.y, p.x - this.G.coord.x) || -Math.PI / 2;
+    const ang = away + (k % 2 ? 1 : -1) * (.35 + .32 * Math.ceil(k / 2)) * ((k % 4 < 2) ? 1 : .8);
+    const L = 64 + (k % 3) * 20;
+    const s = { key, id, parent: agent, L, vx: 0, vy: 0, x: p.x + Math.cos(ang) * (instant ? L : 10), y: p.y + Math.sin(ang) * (instant ? L : 10) };
+    s.line = svgEl('line', { class: 'gk sat' });
+    this.gLinks.append(s.line);
+    s.el = svgEl('g', { class: 'gs', tabindex: this.embed ? null : '0', role: 'button' });
+    s.el.addEventListener('click', () => { if (!s.pending) this.select('s:' + s.key, true); });
+    s.el.addEventListener('keydown', ev => { if (!s.pending && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); this.select('s:' + s.key, true); } });
+    this.gNodes.prepend(s.el);
+    this.sats.push(s);
+    return s;
+  }
+  /* grey placeholders for the items an agent is still working on; each one blooms into its result */
+  expectedDots(id) {
+    const ids = new Set();
+    for (const e of this.events || []) if (e.type === 'dot' && e.agent === id && !e.extra) ids.add(e.id);
+    return ids.size;
+  }
+  syncPending(id) {
+    if (!this.sats || !this.G[id]) return;
+    const mine = this.sats.filter(s => s.parent === id), pend = mine.filter(s => s.pending);
+    const want = this.state[id] === 'working' ? Math.max(0, this.expectedDots(id) - (mine.length - pend.length)) : 0;
+    for (let i = pend.length; i < want; i++) {
+      const s = this.newSat(id, id + ':~' + (++DASH_UID), null, false);
+      s.pending = true;
+      s.el.setAttribute('class', 'gs is-pend' + (this.focusId === id ? ' is-hl' : ''));
+      s.el.setAttribute('aria-hidden', 'true');
+      s.el.removeAttribute('tabindex');
+      s.el.style.animationDelay = (-Math.random() * 1.4).toFixed(2) + 's';
+      s.line.classList.add('pend');
+      s.el.innerHTML = '<circle class="pend" r="4"/>';
+    }
+    for (const s of pend.slice(want)) { s.el.remove(); s.line.remove(); this.sats.splice(this.sats.indexOf(s), 1); }
+    if (want !== pend.length) this.kick();
+  }
   addSat(e, instant) {
     const key = e.agent + ':' + e.id;
     let s = this.sats.find(x => x.key === key);
     const meta = this.satMeta(e);
+    let bloom = false;
     if (!s) {
-      const p = this.G[e.agent];
-      const k = this.sats.filter(x => x.parent === e.agent).length;
-      const away = Math.atan2(p.y - this.G.coord.y, p.x - this.G.coord.x) || -Math.PI / 2;
-      const ang = away + (k % 2 ? 1 : -1) * (.35 + .32 * Math.ceil(k / 2)) * ((k % 4 < 2) ? 1 : .8);
-      const L = 64 + (k % 3) * 20;
-      s = { key, id: e.id, parent: e.agent, L, vx: 0, vy: 0, x: p.x + Math.cos(ang) * (instant ? L : 10), y: p.y + Math.sin(ang) * (instant ? L : 10) };
-      s.line = svgEl('line', { class: 'gk sat' });
-      this.gLinks.append(s.line);
-      s.el = svgEl('g', { class: 'gs', tabindex: this.embed ? null : '0', role: 'button' });
-      s.el.addEventListener('click', () => this.select('s:' + key, true));
-      s.el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); this.select('s:' + key, true); } });
-      this.gNodes.prepend(s.el);
-      this.sats.push(s);
+      s = this.sats.find(x => x.pending && x.parent === e.agent);
+      if (s) {
+        s.pending = false; s.key = key; s.id = e.id; bloom = true;
+        s.el.removeAttribute('aria-hidden'); s.el.style.animationDelay = '';
+        if (!this.embed) s.el.setAttribute('tabindex', '0');
+        s.line.classList.remove('pend');
+      } else s = this.newSat(e.agent, key, e.id, instant);
     }
     s.meta = meta; s.result = e.result; s.text = e.label;
     const bad = e.result === 'bad';
-    s.el.setAttribute('class', 'gs r-' + e.result + (this.selected === 's:' + key ? ' is-sel' : ''));
+    s.el.setAttribute('class', 'gs r-' + e.result + (this.selected === 's:' + key ? ' is-sel' : '') + (this.focusId === e.agent ? ' is-hl' : ''));
     s.el.setAttribute('aria-label', (meta.label || '') + ', ' + (e.label || ''));
-    s.el.innerHTML = (bad
+    s.el.innerHTML = '<g class="sb">' + (bad
       ? '<rect class="sq" x="-15" y="-10" width="30" height="20" rx="2"/><text class="sq-t" y="3.5" text-anchor="middle">' + esc(meta.tag || '!') + '</text>'
       : '<circle class="halo" r="9"/><circle class="dot" r="' + (e.agent === 'pack' ? 5.5 : 4.5) + '"/>') +
-      '<text class="sl" y="' + (bad ? 21 : 17) + '" text-anchor="middle">' + esc(meta.label.length > 22 ? meta.label.slice(0, 21) + '…' : meta.label) + '</text><title>' + esc(e.label || meta.label) + '</title>';
-    if (!instant && !reduced()) s.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: 'ease-out' });
+      '<text class="sl" y="' + (bad ? 21 : 17) + '" text-anchor="middle">' + esc(meta.label.length > 22 ? meta.label.slice(0, 21) + '…' : meta.label) + '</text></g><title>' + esc(e.label || meta.label) + '</title>';
+    if (!instant && !reduced()) {
+      if (bloom) {
+        s.el.querySelector('.sb').animate([{ transform: 'scale(.3)', opacity: .3 }, { transform: 'scale(1.3)', opacity: 1, offset: .55 }, { transform: 'scale(1)', opacity: 1 }], { duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        const ring = svgEl('circle', { class: 'burst ' + (bad ? 'bad' : ''), r: '6' });
+        s.el.prepend(ring);
+        ring.animate([{ transform: 'scale(1)', opacity: .7 }, { transform: 'scale(3.2)', opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => ring.remove();
+      } else s.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: 'ease-out' });
+    }
+    this.syncPending(e.agent);
     if (!instant) this.kick();
   }
   ensureCross(a, b, tone) {
